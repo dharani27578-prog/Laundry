@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}Payment – Laundry Pro{% endblock %}
+
+{% block head %}
+<style>
+.payment-wrapper {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f6f4ef 0%, #eef2ff 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+}
+.payment-card {
+    background: #fff;
+    border-radius: 24px;
+    border: 1.5px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    width: 100%; max-width: 440px;
+    overflow: hidden;
+}
+.payment-header {
+    background: var(--ink);
+    padding: 28px 32px;
+    color: #fff;
+    display: flex; align-items: center; gap: 14px;
+}
+.payment-header .brand { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; }
+.payment-header .brand span { color: var(--accent); }
+.payment-body { padding: 32px; }
+.qr-box {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    background: #f8f7ff;
+    margin: 20px 0;
+}
+.timer-ring {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    border: 5px solid var(--border);
+    border-top-color: var(--warn);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    animation: spin 60s linear infinite;
+    position: relative;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.timer-inner {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    animation: spin 60s linear infinite reverse;
+}
+.steps { display: flex; flex-direction: column; gap: 10px; }
+.step-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: 10px;
+    background: #f6f4ef;
+    font-size: 13px;
+}
+.step-circle {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="payment-wrapper">
+    <div class="payment-card">
+        <div class="payment-header">
+            <a href="{{ url_for('user_dashboard') }}" style="color:rgba(255,255,255,0.5); font-size:20px;">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <div class="brand">LAUNDRY<span>PRO</span></div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.5);">Secure Payment</div>
+            </div>
+        </div>
+
+        <div class="payment-body">
+            <!-- AMOUNT -->
+            <div style="text-align:center; margin-bottom:24px;">
+                <div style="font-size:13px; color:var(--muted); margin-bottom:4px;">Order #{{ order_id }} · Amount Due</div>
+                <div style="font-family:'Syne',sans-serif; font-size:42px; font-weight:800; color:var(--ink);">
+                    ₹{{ amount }}
+                </div>
+            </div>
+
+            <!-- QR CODE -->
+            <div class="qr-box">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa={{ settings.upi_id }}&am={{ amount }}&tn=LaundryPro-Order-{{ order_id }}"
+                     alt="UPI QR Code" style="width:180px; height:180px; border-radius:8px;" onerror="this.style.display='none'">
+                <div style="margin-top:12px; font-family:'Syne',sans-serif; font-weight:700; font-size:15px;">Scan to Pay</div>
+                <div style="font-size:12px; color:var(--muted); margin-top:4px;">UPI: <strong>{{ settings.upi_id }}</strong></div>
+            </div>
+
+            <!-- TIMER -->
+            <div style="text-align:center; margin-bottom:24px;">
+                <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Payment expires in</div>
+                <div style="font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--warn);" id="timer">05:00</div>
+            </div>
+
+            <!-- HOW TO PAY STEPS -->
+            <div class="steps mb-4">
+                <div class="step-row"><div class="step-circle">1</div>Open your UPI app (GPay, PhonePe, Paytm)</div>
+                <div class="step-row"><div class="step-circle">2</div>Scan the QR code above</div>
+                <div class="step-row"><div class="step-circle">3</div>Enter ₹{{ amount }} and pay</div>
+                <div class="step-row"><div class="step-circle">4</div>Click "I Have Paid" below</div>
+            </div>
+
+            <!-- CONFIRM BUTTON -->
+            <form action="{{ url_for('confirm_payment', order_id=order_id) }}" method="POST">
+                <button type="submit" class="btn-primary-custom w-100" style="justify-content:center; border-radius:12px; padding:15px; font-size:16px; background:var(--success);">
+                    <i class="fa-solid fa-circle-check"></i> I Have Paid
+                </button>
+            </form>
+
+            <a href="{{ url_for('user_dashboard') }}" style="display:block; text-align:center; margin-top:14px; font-size:13px; color:var(--muted);">
+                Pay later (Cash on pickup)
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let seconds = 300;
+const timer = document.getElementById('timer');
+if (timer) {
+    const iv = setInterval(() => {
+        if (--seconds < 0) { clearInterval(iv); window.location.href = "{{ url_for('user_dashboard') }}"; return; }
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        timer.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+        if (seconds < 60) timer.style.color = 'var(--warn)';
+    }, 1000);
+}
+</script>
+{% endblock %}

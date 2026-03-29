@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% block title %}Expenses – Laundry Pro{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+    {% include 'partials/admin_sidebar.html' with context %}
+
+    <div class="admin-content">
+        <div class="topbar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="menu-toggle" onclick="openSidebar()"><i class="fa-solid fa-bars"></i></button>
+                <div class="topbar-title">Expenses & Ledger</div>
+            </div>
+            <button class="btn-primary-custom" style="padding:7px 14px; font-size:12px; border-radius:8px;"
+                    data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                <i class="fa-solid fa-plus"></i> <span class="btn-text-hide-mobile">Add Entry</span>
+            </button>
+        </div>
+
+        <div class="main-content">
+            <!-- SUMMARY -->
+            <div class="row g-3 mb-4">
+                <div class="col-4">
+                    <div class="stat-card" style="color:var(--success)">
+                        <div class="stat-icon" style="background:rgba(0,200,150,.1);"><i class="fa-solid fa-arrow-trend-up" style="color:var(--success)"></i></div>
+                        <div class="stat-value" style="font-size:20px;">Rs {{ total_credit|int }}</div>
+                        <div class="stat-label">Credits</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-card" style="color:var(--warn)">
+                        <div class="stat-icon" style="background:rgba(255,107,53,.1);"><i class="fa-solid fa-arrow-trend-down" style="color:var(--warn)"></i></div>
+                        <div class="stat-value" style="font-size:20px;">Rs {{ total_debit|int }}</div>
+                        <div class="stat-label">Debits</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-card" style="color:{% if balance >= 0 %}var(--success){% else %}var(--warn){% endif %}">
+                        <div class="stat-icon" style="background:{% if balance >= 0 %}rgba(0,200,150,.1){% else %}rgba(255,107,53,.1){% endif %};"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <div class="stat-value" style="font-size:20px;">Rs {{ balance|int }}</div>
+                        <div class="stat-label">Balance</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MOBILE: expense cards -->
+            <div class="d-md-none">
+                {% for e in expenses %}
+                <div class="lp-card mb-2">
+                    <div style="padding:14px; display:flex; align-items:center; gap:12px;">
+                        <div style="width:38px; height:38px; border-radius:10px; background:{% if e.type=='credit' %}rgba(0,200,150,.1){% else %}rgba(255,107,53,.1){% endif %}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <i class="fa-solid {% if e.type=='credit' %}fa-arrow-up{% else %}fa-arrow-down{% endif %}" style="color:{% if e.type=='credit' %}var(--success){% else %}var(--warn){% endif %};"></i>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:600; font-size:13px;">{{ e.category or '–' }}</div>
+                            <div style="font-size:11px; color:var(--muted);">{{ e.description or '' }} · {{ e.entry_date.strftime('%d %b %Y') }}</div>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
+                            <div style="font-family:'Syne',sans-serif; font-weight:800; font-size:15px; color:{% if e.type=='credit' %}var(--success){% else %}var(--warn){% endif %};">
+                                {{ '+' if e.type=='credit' else '-' }}Rs {{ e.amount }}
+                            </div>
+                            <form action="/admin/expenses/delete/{{ e.id }}" method="POST" onsubmit="return confirm('Delete?');">
+                                <button type="submit" style="background:none; border:none; color:var(--warn); font-size:13px; cursor:pointer; padding:2px 6px;">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div style="text-align:center; padding:40px; color:var(--muted);">No entries yet.</div>
+                {% endfor %}
+            </div>
+
+            <!-- DESKTOP TABLE -->
+            <div class="lp-card d-none d-md-block">
+                <div class="lp-card-header">Transaction Ledger</div>
+                <div class="overflow-x-auto">
+                    <table class="lp-table">
+                        <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th>Action</th></tr></thead>
+                        <tbody>
+                        {% for e in expenses %}
+                        <tr>
+                            <td>{{ e.entry_date.strftime('%d %b %Y') }}</td>
+                            <td><span class="status-pill {{ 'status-Delivered' if e.type=='credit' else 'status-Cancelled' }}"><i class="fa-solid {{ 'fa-arrow-up' if e.type=='credit' else 'fa-arrow-down' }}"></i> {{ e.type|upper }}</span></td>
+                            <td><span style="background:#f0f4ff; padding:2px 9px; border-radius:50px; font-size:11px; font-weight:600; color:var(--primary);">{{ e.category or '–' }}</span></td>
+                            <td style="color:var(--muted);">{{ e.description or '–' }}</td>
+                            <td style="font-family:'Syne',sans-serif; font-weight:800; color:{{ 'var(--success)' if e.type=='credit' else 'var(--warn)' }}; font-size:15px;">{{ '+' if e.type=='credit' else '–' }}Rs {{ e.amount }}</td>
+                            <td>
+                                <form action="/admin/expenses/delete/{{ e.id }}" method="POST" onsubmit="return confirm('Delete entry?');">
+                                    <button type="submit" style="background:#fff0eb; color:var(--warn); border:1.5px solid #ffd5c2; padding:5px 10px; border-radius:7px; font-size:12px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--muted);">No entries yet.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADD EXPENSE MODAL -->
+<div class="modal fade lp-modal" id="addExpenseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-syne">Add Ledger Entry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/expenses/add" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="lp-label">Entry Type</label>
+                        <div style="display:flex; gap:10px;">
+                            <label style="flex:1; display:flex; align-items:center; gap:8px; padding:11px; border:2px solid var(--border); border-radius:10px; cursor:pointer;" id="lbl-credit">
+                                <input type="radio" name="type" value="credit" checked onchange="highlightType(this)">
+                                <i class="fa-solid fa-arrow-up" style="color:var(--success)"></i>
+                                <span style="font-weight:600; font-size:13px;">Credit</span>
+                            </label>
+                            <label style="flex:1; display:flex; align-items:center; gap:8px; padding:11px; border:2px solid var(--border); border-radius:10px; cursor:pointer;" id="lbl-debit">
+                                <input type="radio" name="type" value="debit" onchange="highlightType(this)">
+                                <i class="fa-solid fa-arrow-down" style="color:var(--warn)"></i>
+                                <span style="font-weight:600; font-size:13px;">Debit</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="lp-label">Category</label>
+                        <select name="category" class="lp-input">
+                            <option>Order Payment</option><option>Other Income</option>
+                            <option>Utilities</option><option>Supplies</option>
+                            <option>Maintenance</option><option>Salaries</option>
+                            <option>Rent</option><option>Other Expense</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="lp-label">Amount (Rs)</label>
+                        <input type="number" name="amount" class="lp-input" min="0" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="lp-label">Description</label>
+                        <textarea name="description" class="lp-input" rows="2" placeholder="Brief description..."></textarea>
+                    </div>
+                    <div class="mb-1">
+                        <label class="lp-label">Date</label>
+                        <input type="date" name="entry_date" class="lp-input">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-custom" style="border-radius:8px;"><i class="fa-solid fa-plus"></i> Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function highlightType(radio) {
+    document.getElementById('lbl-credit').style.borderColor = 'var(--border)';
+    document.getElementById('lbl-debit').style.borderColor  = 'var(--border)';
+    document.getElementById('lbl-' + radio.value).style.borderColor = radio.value === 'credit' ? 'var(--success)' : 'var(--warn)';
+}
+highlightType(document.querySelector('input[name="type"]:checked'));
+// Set today's date
+document.querySelector('input[name="entry_date"]').value = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

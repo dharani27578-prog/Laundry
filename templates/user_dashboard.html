@@ -1,0 +1,1073 @@
+{% extends 'base.html' %}
+{% block title %}My Dashboard – Laundry Pro{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ══════════════════ KEYFRAMES ══════════════════════════ */
+@keyframes fadeInUp   {from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeInDown {from{opacity:0;transform:translateY(-18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeInLeft {from{opacity:0;transform:translateX(-24px);}to{opacity:1;transform:translateX(0);}}
+@keyframes fadeInRight{from{opacity:0;transform:translateX(24px);}to{opacity:1;transform:translateX(0);}}
+@keyframes popIn      {0%{transform:scale(.82);opacity:0;}65%{transform:scale(1.05);}100%{transform:scale(1);opacity:1;}}
+@keyframes ripple     {0%{transform:scale(0);opacity:.5;}100%{transform:scale(4);opacity:0;}}
+@keyframes spin       {to{transform:rotate(360deg);}}
+@keyframes bellShake  {0%,100%{transform:rotate(0);}15%{transform:rotate(14deg);}35%{transform:rotate(-11deg);}55%{transform:rotate(7deg);}75%{transform:rotate(-4deg);}}
+@keyframes checkPop   {0%{transform:scale(0) rotate(-30deg);}65%{transform:scale(1.25) rotate(6deg);}100%{transform:scale(1) rotate(0);}}
+@keyframes float      {0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+@keyframes gradShift  {0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+@keyframes dotPulse   {0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.6);opacity:.4;}}
+@keyframes slideTab   {from{transform:translateX(8px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@keyframes glowPulse  {0%,100%{box-shadow:0 0 0 0 rgba(26,86,255,.3);}50%{box-shadow:0 0 0 10px rgba(26,86,255,0);}}
+@keyframes scanLine   {0%{top:12px;}100%{top:calc(100% - 12px);}}
+@keyframes slideUp    {from{transform:translateY(110%);opacity:0;}to{transform:translateY(0);opacity:1;}}
+@keyframes slideDown  {from{transform:translateY(0);opacity:1;}to{transform:translateY(110%);opacity:0;}}
+
+/* ══════════════════ BASE LAYOUT ════════════════════════ */
+.user-layout{display:flex;flex-direction:column;min-height:100vh;background:#eef1f8;}
+
+/* ── TOPBAR ── */
+.user-topbar{background:var(--ink);height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:300;animation:fadeInDown .4s ease;box-shadow:0 2px 16px rgba(0,0,0,.3);}
+.brand{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:#fff;letter-spacing:-.02em;}
+.brand span{color:var(--accent);}
+
+/* ── HAMBURGER ── */
+.mob-menu-btn{display:none;background:none;border:none;color:rgba(255,255,255,.8);font-size:20px;cursor:pointer;padding:8px;border-radius:8px;transition:background .2s;-webkit-tap-highlight-color:transparent;}
+.mob-menu-btn:hover{background:rgba(255,255,255,.1);}
+
+/* ── SLIDE-OUT DRAWER ── */
+.mob-drawer{position:fixed;inset:0;z-index:600;pointer-events:none;}
+.mob-overlay{position:absolute;inset:0;background:rgba(0,0,0,.65);opacity:0;transition:opacity .3s;pointer-events:none;}
+.mob-panel{position:absolute;top:0;right:0;width:min(300px,88vw);height:100%;background:var(--ink);transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.4);}
+.mob-drawer.open .mob-overlay{opacity:1;pointer-events:all;}
+.mob-drawer.open .mob-panel{transform:translateX(0);}
+.mob-panel-head{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;}
+.mob-panel-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;padding:4px;border-radius:6px;-webkit-tap-highlight-color:transparent;}
+.mob-panel-close:hover{background:rgba(255,255,255,.1);color:#fff;}
+.mob-user-info{padding:16px;border-bottom:1px solid rgba(255,255,255,.07);}
+.mob-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:9px;}
+.mob-nav-list{padding:10px 8px;flex:1;}
+.mob-nav-btn{display:flex;align-items:center;gap:12px;padding:12px 14px;color:rgba(255,255,255,.65);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;border:none;background:none;width:100%;text-align:left;text-decoration:none;border-radius:10px;margin-bottom:2px;-webkit-tap-highlight-color:transparent;}
+.mob-nav-btn:hover,.mob-nav-btn:active{background:rgba(255,255,255,.08);color:#fff;}
+.mob-nav-btn i{width:18px;text-align:center;font-size:15px;}
+.mob-nav-divider{height:1px;background:rgba(255,255,255,.07);margin:8px 0;}
+.mob-logout-btn{color:rgba(255,100,80,.9) !important;}
+.mob-footer{padding:14px 16px;border-top:1px solid rgba(255,255,255,.07);}
+
+/* ── BOTTOM NAV BAR ── */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--ink);border-top:1px solid rgba(255,255,255,.1);z-index:200;padding:6px 0 max(6px,env(safe-area-inset-bottom));}
+.bn-inner{display:grid;grid-template-columns:repeat(5,1fr);}
+.bn-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;cursor:pointer;font-size:9px;font-weight:700;color:rgba(255,255,255,.4);border:none;background:none;transition:all .2s;position:relative;-webkit-tap-highlight-color:transparent;letter-spacing:.02em;text-transform:uppercase;}
+.bn-btn.active{color:var(--accent);}
+.bn-btn i{font-size:17px;transition:transform .2s;}
+.bn-btn.active i{transform:translateY(-2px);}
+.bn-badge{position:absolute;top:3px;right:calc(50% - 16px);background:var(--warn);color:#fff;width:14px;height:14px;border-radius:50%;font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:700;}
+
+/* ── HERO ── */
+.hero-wrap{background:linear-gradient(135deg,#0d0f14 0%,#1a1f35 55%,#0d1628 100%);background-size:300% 300%;animation:gradShift 10s ease infinite;padding:22px 20px 70px;position:relative;overflow:hidden;}
+.hero-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 80% 50%,rgba(26,86,255,.18),transparent 70%),radial-gradient(ellipse 40% 60% at 10% 80%,rgba(0,229,195,.1),transparent 60%);}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:44px 44px;}
+.hero-inner{position:relative;z-index:2;}
+.hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:5px;animation:fadeInLeft .5s ease .05s both;}
+.hero-name{font-family:'Outfit',sans-serif;font-size:clamp(20px,4vw,30px);font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:6px;animation:fadeInLeft .5s ease .1s both;}
+.hero-sub{font-size:12px;color:rgba(255,255,255,.45);animation:fadeInLeft .5s ease .15s both;}
+.hero-tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;animation:fadeInLeft .5s ease .2s both;}
+.hero-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:50px;padding:4px 11px;font-size:11px;color:rgba(255,255,255,.7);font-weight:500;}
+
+/* ── STATS OVERLAP ── */
+.stats-overlap{margin:-48px 12px 0;position:relative;z-index:10;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;animation:fadeInUp .5s ease .2s both;}
+.stat-box{background:#fff;border-radius:14px;border:1px solid var(--border);padding:13px 11px;box-shadow:0 6px 22px rgba(0,0,0,.1);transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden;}
+.stat-box:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.14);}
+.stat-box::after{content:'';position:absolute;bottom:-18px;right:-18px;width:72px;height:72px;border-radius:50%;background:currentColor;opacity:.06;}
+.s-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:9px;}
+.s-val{font-family:'Outfit',sans-serif;font-size:19px;font-weight:800;line-height:1;}
+.s-lbl{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* ── MAIN GRID ── */
+.dash-grid{display:grid;grid-template-columns:350px 1fr;gap:14px;padding:14px 12px 100px;}
+
+/* ── CARDS ── */
+.dash-card{background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;transition:box-shadow .2s;}
+.dash-card:hover{box-shadow:0 8px 28px rgba(0,0,0,.1);}
+.dc-head{padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;}
+.dc-title{font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;display:flex;align-items:center;gap:7px;}
+
+/* ── SERVICE TILES ── */
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.svc-tile{border:1.5px solid var(--border);border-radius:11px;padding:11px 9px;cursor:pointer;transition:all .2s;text-align:center;background:#fff;-webkit-tap-highlight-color:transparent;}
+.svc-tile:hover,.svc-tile:active{border-color:var(--primary);background:#f4f7ff;}
+.svc-tile.active{border-color:var(--primary);background:linear-gradient(135deg,#eef2ff,#e0ecff);box-shadow:0 4px 14px rgba(26,86,255,.18);}
+.svc-tile .t-icon{font-size:20px;margin-bottom:5px;}
+.svc-tile .t-name{font-size:11px;font-weight:700;font-family:'Outfit',sans-serif;}
+.svc-tile .t-price{font-size:10px;color:var(--primary);font-weight:600;margin-top:1px;}
+
+/* ── QTY ── */
+.qty-row{display:flex;align-items:center;gap:8px;}
+.qb{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:#fff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+.qb:hover,.qb:active{background:var(--ink);color:#fff;border-color:var(--ink);}
+
+/* ── PAYMENT TILES ── */
+.pm-row{display:flex;gap:7px;}
+.pm-tile{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:11px;font-weight:600;transition:all .2s;-webkit-tap-highlight-color:transparent;}
+.pm-tile:hover,.pm-tile:active{border-color:var(--primary);background:#f4f7ff;}
+.pm-tile.active{border-color:var(--primary);background:linear-gradient(135deg,#eef2ff,#e0ecff);color:var(--primary);}
+.pm-tile i{font-size:17px;}
+
+/* ── AMOUNT BOX ── */
+.amt-box{background:linear-gradient(135deg,#0d0f14,#1a2040);border-radius:13px;padding:14px 16px;margin:12px 0;display:flex;align-items:center;justify-content:space-between;animation:popIn .3s ease;position:relative;overflow:hidden;}
+.amt-box::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 90% 50%,rgba(26,86,255,.3),transparent 60%);}
+.amt-label{font-size:10px;color:rgba(255,255,255,.5);margin-bottom:3px;}
+.amt-value{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;color:#fff;position:relative;z-index:1;}
+.amt-sub{font-size:11px;color:rgba(255,255,255,.35);position:relative;z-index:1;}
+
+/* ── SUBMIT ── */
+.submit-btn{width:100%;padding:13px;border-radius:11px;background:linear-gradient(135deg,var(--primary),#3d6fff);color:#fff;border:none;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;transition:all .2s;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 18px rgba(26,86,255,.38);animation:glowPulse 3s ease infinite;-webkit-tap-highlight-color:transparent;}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(26,86,255,.48);}
+.ripple-effect{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:ripple .6s linear;pointer-events:none;}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:3px;background:#eef1f8;border-radius:11px;padding:4px;}
+.tab-btn{flex:1;padding:8px 3px;border-radius:8px;border:none;background:transparent;font-family:'Outfit',sans-serif;font-weight:600;font-size:11px;cursor:pointer;color:var(--muted);transition:all .2s;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.tab-btn.active{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.tab-pane{display:none;animation:slideTab .3s ease;}
+.tab-pane.active{display:block;}
+
+/* ── ORDER ITEMS ── */
+.order-item{display:flex;align-items:flex-start;gap:11px;padding:12px;border-radius:13px;border:1.5px solid var(--border);background:#fff;margin-bottom:9px;transition:all .2s;animation:fadeInUp .4s ease both;}
+.order-item:hover{border-color:rgba(26,86,255,.28);box-shadow:0 4px 18px rgba(26,86,255,.1);transform:translateX(3px);}
+.o-badge{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#eef2ff,#dde4ff);display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-weight:800;font-size:11px;color:var(--primary);flex-shrink:0;}
+.o-prog-track{height:3px;background:var(--border);border-radius:50px;margin-top:7px;overflow:hidden;}
+.o-prog-bar{height:100%;border-radius:50px;transition:width 1.3s cubic-bezier(.22,.61,.36,1);}
+
+/* ── ACTIVE BANNER ── */
+.active-banner{background:linear-gradient(135deg,#1a56ff,#3d6fff);border-radius:16px;padding:15px 16px;border:none;}
+.ab-item{background:rgba(255,255,255,.12);border-radius:11px;padding:11px 12px;margin-bottom:8px;backdrop-filter:blur(6px);}
+.ab-item:last-child{margin-bottom:0;}
+
+/* ── CHART ── */
+.chart-wrap{height:165px;position:relative;}
+
+/* ══════════════════ UPI QR SECTION ════════════════════ */
+.upi-section{padding:15px;}
+
+/* Amount input */
+.upi-amt-wrap{display:flex;align-items:center;border:2px solid var(--border);border-radius:13px;overflow:hidden;margin-bottom:11px;transition:border .2s;}
+.upi-amt-wrap:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px rgba(26,86,255,.1);}
+.upi-prefix{padding:11px 12px;background:#f8f7f4;color:var(--muted);font-family:'Outfit',sans-serif;font-weight:700;font-size:17px;border-right:2px solid var(--border);flex-shrink:0;}
+.upi-field{flex:1;border:none;outline:none;padding:11px 12px;font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--ink);background:#fff;min-width:0;}
+.upi-field::placeholder{color:#ccc;font-size:16px;}
+
+/* Preset pills */
+.upi-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.upi-pill{padding:6px 12px;border-radius:50px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--ink);-webkit-tap-highlight-color:transparent;}
+.upi-pill.active,.upi-pill:hover{background:var(--primary);color:#fff;border-color:var(--primary);transform:scale(1.04);}
+
+/* Note field */
+.upi-note{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink);outline:none;margin-bottom:12px;transition:border .2s;background:#fff;}
+.upi-note:focus{border-color:var(--primary);}
+
+/* QR display card */
+.qr-card{background:linear-gradient(135deg,#0d0f14,#1a1f35);border-radius:16px;padding:18px;text-align:center;margin-bottom:12px;position:relative;overflow:hidden;}
+.qr-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 80% 20%,rgba(26,86,255,.25),transparent 60%);}
+.qr-card-inner{position:relative;z-index:1;}
+.qr-amount-display{font-family:'Outfit',sans-serif;font-size:32px;font-weight:800;color:#fff;margin-bottom:14px;animation:popIn .3s ease;}
+.qr-amount-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:-10px;margin-bottom:14px;}
+.qr-frame-wrap{display:inline-block;padding:12px;background:#fff;border-radius:16px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.qr-scan-line{position:absolute;left:12px;right:12px;height:2px;background:linear-gradient(90deg,transparent,#1a56ff,transparent);animation:scanLine 2s ease-in-out infinite alternate;pointer-events:none;}
+/* Corner brackets */
+.qr-corner{position:absolute;width:18px;height:18px;border-color:var(--accent);border-style:solid;}
+.qr-corner.tl{top:4px;left:4px;border-width:3px 0 0 3px;border-radius:4px 0 0 0;}
+.qr-corner.tr{top:4px;right:4px;border-width:3px 3px 0 0;border-radius:0 4px 0 0;}
+.qr-corner.bl{bottom:4px;left:4px;border-width:0 0 3px 3px;border-radius:0 0 0 4px;}
+.qr-corner.br{bottom:4px;right:4px;border-width:0 3px 3px 0;border-radius:0 0 4px 0;}
+
+.qr-frame-wrap img{display:block;border-radius:8px;transition:opacity .35s;}
+.qr-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--muted);font-weight:600;text-align:center;padding:10px;border-radius:13px;}
+.upi-chip{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:50px;padding:6px 14px;margin:12px 0 6px;}
+.upi-chip-txt{font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;color:#fff;}
+.upi-chip-copy{background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:13px;padding:0 2px;transition:color .2s;}
+.upi-chip-copy:hover{color:#fff;}
+.qr-hint{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;}
+
+/* App buttons — 2x2 grid */
+.app-btns-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;margin:10px 0 7px;}
+.app-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.app-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 8px;border-radius:11px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none;-webkit-tap-highlight-color:transparent;}
+.app-btn:active{transform:scale(.96);}
+.app-btn.gpay   {background:linear-gradient(135deg,#4285f4,#3367d6);color:#fff;}
+.app-btn.phonepe{background:linear-gradient(135deg,#6f3ec6,#5a2db0);color:#fff;}
+.app-btn.paytm  {background:linear-gradient(135deg,#00BAF2,#0099cc);color:#fff;}
+.app-btn.fullpg {background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;}
+.app-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3);}
+.app-btn img{width:20px;height:20px;object-fit:contain;border-radius:4px;}
+
+/* ── PROFILE ── */
+.prof-ring{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-weight:800;font-size:20px;color:#fff;animation:float 4s ease infinite;box-shadow:0 4px 16px rgba(26,86,255,.35);flex-shrink:0;}
+.info-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.info-row:last-child{border-bottom:none;}
+.info-row i{width:15px;color:var(--primary);font-size:12px;margin-top:2px;}
+
+/* ── QUICK ACTIONS ── */
+.qa-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.qa-btn{display:flex;align-items:center;gap:9px;padding:12px;border-radius:11px;border:1.5px solid var(--border);background:#fff;cursor:pointer;transition:all .2s;text-decoration:none;color:var(--ink);font-size:12px;font-weight:600;-webkit-tap-highlight-color:transparent;}
+.qa-btn:hover,.qa-btn:active{border-color:var(--primary);background:#f4f7ff;color:var(--ink);}
+.qa-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+
+/* ── NOTIFICATION ── */
+.notif-bell{position:relative;cursor:pointer;}
+.notif-badge{position:absolute;top:-4px;right:-4px;background:var(--warn);color:#fff;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;animation:popIn .3s ease;}
+.notif-dropdown{position:absolute;right:0;top:calc(100% + 10px);background:#fff;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-lg);width:min(310px,calc(100vw - 24px));z-index:400;overflow:hidden;display:none;}
+.notif-dropdown.show{display:block;animation:fadeInDown .2s ease;}
+.notif-item{padding:10px 13px;border-bottom:1px solid var(--border);font-size:12px;line-height:1.5;display:flex;gap:8px;align-items:flex-start;transition:background .15s;cursor:pointer;}
+.notif-item:last-child{border-bottom:none;}
+.notif-item:hover{background:#f5f8ff;}
+.notif-item.unread{background:#f0f4ff;}
+.notif-dot{width:7px;height:7px;border-radius:50%;background:var(--primary);flex-shrink:0;margin-top:4px;animation:dotPulse 2s infinite;}
+.mark-all-btn{background:none;border:none;color:var(--primary);font-size:11px;font-weight:700;cursor:pointer;padding:2px 7px;border-radius:5px;}
+.mark-all-btn:hover{background:#eef2ff;}
+.bell-animate{animation:bellShake .6s ease !important;}
+.spin-icon{animation:spin .8s linear infinite;display:inline-block;}
+
+/* ══════════════════ RESPONSIVE ════════════════════════ */
+@media(max-width:1100px){.dash-grid{grid-template-columns:300px 1fr;}}
+@media(max-width:860px){.dash-grid{grid-template-columns:1fr;}.stats-overlap{grid-template-columns:repeat(2,1fr);gap:8px;}}
+
+@media(max-width:600px){
+    /* show mobile controls */
+    .mob-menu-btn{display:flex;align-items:center;justify-content:center;}
+    .bottom-nav{display:block;}
+    /* layout tweaks */
+    .hero-wrap{padding:18px 14px 62px;}
+    .stats-overlap{margin:-40px 10px 0;gap:8px;}
+    .stat-box{padding:11px 9px;}
+    .s-val{font-size:16px;}
+    .s-icon{width:30px;height:30px;font-size:13px;margin-bottom:7px;}
+    .dash-grid{padding:12px 10px 90px;gap:11px;grid-template-columns:1fr;}
+    .user-topbar{padding:0 12px;}
+    .brand{font-size:17px;}
+    /* form */
+    .svc-grid{grid-template-columns:1fr 1fr;}
+    .pm-row{gap:5px;}
+    .pm-tile{padding:8px 4px;font-size:10px;}
+    .pm-tile i{font-size:15px;}
+    /* tabs */
+    .tab-btn{font-size:10px;padding:7px 2px;}
+    /* UPI */
+    .upi-field{font-size:18px;}
+    .qr-amount-display{font-size:26px;}
+    .qr-frame-wrap img{width:150px;height:150px;}
+    .app-btns{grid-template-columns:1fr 1fr;}
+    /* misc */
+    .qa-grid{grid-template-columns:1fr 1fr;}
+    .info-row{font-size:12px;}
+    /* hide desktop avatar text */
+    .desk-name-txt{display:none;}
+}
+@media(max-width:400px){
+    .stats-overlap{grid-template-columns:1fr 1fr;}
+    .hero-name{font-size:19px;}
+    .app-btns{grid-template-columns:1fr 1fr;}
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="user-layout">
+
+    <!-- ════ TOPBAR ════ -->
+    <div class="user-topbar">
+        <div class="brand">LAUNDRY<span>PRO</span></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <!-- Notification Bell -->
+            <div class="notif-bell" onclick="toggleNotif('uNotifDrop')" id="uBell">
+                <i class="fa-solid fa-bell" style="color:rgba(255,255,255,.75);font-size:17px;"></i>
+                {% if notif_count > 0 %}<span class="notif-badge" id="uNotifBadge">{{ notif_count }}</span>{% endif %}
+                <div class="notif-dropdown" id="uNotifDrop">
+                    <div style="padding:11px 13px;font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+                        <span><i class="fa-solid fa-bell" style="color:var(--primary);margin-right:5px;"></i>Notifications</span>
+                        <button class="mark-all-btn" onclick="markAllRead(event)"><i class="fa-solid fa-check-double"></i> All read</button>
+                    </div>
+                    <div style="max-height:250px;overflow-y:auto;">
+                        {% for n in notifications %}
+                        <div class="notif-item {{ 'unread' if not n.is_read }}">
+                            {% if not n.is_read %}<div class="notif-dot"></div>{% else %}<div style="width:7px;flex-shrink:0;"></div>{% endif %}
+                            <div><div>{{ n.message }}</div><div style="font-size:10px;color:var(--muted);margin-top:1px;">{{ n.created_at.strftime('%d %b %I:%M %p') }}</div></div>
+                        </div>
+                        {% else %}
+                        <div class="notif-item"><div style="color:var(--muted);font-size:12px;text-align:center;width:100%;padding:8px 0;"><i class="fa-solid fa-bell-slash" style="font-size:18px;opacity:.2;display:block;margin-bottom:5px;"></i>No notifications</div></div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <!-- Desktop avatar (hidden on mobile) -->
+            <div class="d-none d-sm-flex" style="align-items:center;gap:8px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;">{{ session.full_name[0]|upper }}</div>
+                <div class="desk-name-txt">
+                    <div style="color:#fff;font-size:12px;font-weight:600;">{{ session.full_name }}</div>
+                    <a href="{{ url_for('logout') }}" style="color:rgba(255,100,80,.85);font-size:10px;display:flex;align-items:center;gap:3px;"><i class="fa-solid fa-right-from-bracket" style="font-size:9px;"></i> Logout</a>
+                </div>
+            </div>
+            <!-- Mobile hamburger -->
+            <button class="mob-menu-btn" onclick="openDrawer()" aria-label="Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ════ MOBILE DRAWER ════ -->
+    <div class="mob-drawer" id="mobDrawer">
+        <div class="mob-overlay" onclick="closeDrawer()"></div>
+        <div class="mob-panel">
+            <div class="mob-panel-head">
+                <div class="brand" style="font-size:17px;">LAUNDRY<span>PRO</span></div>
+                <button class="mob-panel-close" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <!-- User info -->
+            <div class="mob-user-info">
+                <div class="mob-avatar">{{ session.full_name[0]|upper }}</div>
+                <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:15px;color:#fff;">{{ session.full_name }}</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:2px;">@{{ user_profile.username }}</div>
+                <div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;">
+                    <span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);font-size:11px;padding:3px 10px;border-radius:50px;font-weight:600;"><i class="fa-solid fa-basket-shopping" style="font-size:9px;margin-right:3px;"></i>{{ total_orders }} Orders</span>
+                    <span style="background:rgba(0,229,195,.12);color:var(--accent);font-size:11px;padding:3px 10px;border-radius:50px;font-weight:600;"><i class="fa-solid fa-wallet" style="font-size:9px;margin-right:3px;"></i>Rs {{ total_spent|int }}</span>
+                </div>
+            </div>
+            <!-- Nav links -->
+            <div class="mob-nav-list">
+                <button class="mob-nav-btn" onclick="closeDrawer();swTab('orders',null)"><i class="fa-solid fa-list" style="color:#1a56ff;"></i> My Orders</button>
+                <button class="mob-nav-btn" onclick="closeDrawer();swTab('spend',null)"><i class="fa-solid fa-chart-area" style="color:#6200ea;"></i> Spending</button>
+                <button class="mob-nav-btn" onclick="closeDrawer();swTab('upi',null)"><i class="fa-solid fa-qrcode" style="color:#00c896;"></i> UPI Pay</button>
+                <button class="mob-nav-btn" onclick="closeDrawer();swTab('profile',null)"><i class="fa-solid fa-user" style="color:#f5a623;"></i> My Profile</button>
+                <div class="mob-nav-divider"></div>
+                <a href="{{ url_for('upi_qr') }}" class="mob-nav-btn"><i class="fa-solid fa-expand" style="color:#00BAF2;"></i> Full UPI Page</a>
+                <div class="mob-nav-divider"></div>
+                <a href="{{ url_for('logout') }}" class="mob-nav-btn mob-logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </div>
+            <div class="mob-footer">
+                <div style="font-size:11px;color:rgba(255,255,255,.25);text-align:center;">Laundry Pro · Customer Dashboard</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ HERO ════ -->
+    <div class="hero-wrap">
+        <div class="hero-grid"></div>
+        <div class="hero-inner">
+            <div class="hero-eyebrow"><i class="fa-solid fa-wave-square" style="margin-right:4px;"></i>Welcome back</div>
+            <div class="hero-name">{{ session.full_name }} 👋</div>
+            <div class="hero-sub">Your laundry dashboard — everything in one place.</div>
+            <div class="hero-tags">
+                <span class="hero-tag"><i class="fa-solid fa-basket-shopping"></i> {{ total_orders }} Orders</span>
+                <span class="hero-tag"><i class="fa-solid fa-clock" style="color:var(--warn);"></i> {{ pending_count }} Pending</span>
+                <span class="hero-tag"><i class="fa-solid fa-star" style="color:#f5a623;"></i> {{ fav_service }}</span>
+                {% if active_count > 0 %}<span class="hero-tag" style="border-color:rgba(0,229,195,.3);color:var(--accent);"><i class="fa-solid fa-circle" style="font-size:7px;animation:dotPulse 1.5s infinite;"></i> {{ active_count }} Active</span>{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ STATS ════ -->
+    <div class="stats-overlap">
+        {% set s_delays=['0s','0.1s','0.2s','0.3s'] %}
+        {% for lbl,val,icon,color in [
+            ('Orders',   total_orders,          'fa-basket-shopping','#1a56ff'),
+            ('Active',   active_count,           'fa-soap',           '#6200ea'),
+            ('Delivered',delivered_count,        'fa-circle-check',   '#00c896'),
+            ('Spent',   'Rs '~(total_spent|int), 'fa-wallet',         '#ff6b35')
+        ] %}
+        <div class="stat-box" style="color:{{ color }};animation:fadeInUp .5s ease {{ s_delays[loop.index0] }} both;">
+            <div class="s-icon" style="background:{{ color }}18;"><i class="fa-solid {{ icon }}" style="color:{{ color }};"></i></div>
+            <div class="s-val" data-count="{{ val }}">{{ val }}</div>
+            <div class="s-lbl">{{ lbl }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ════ MAIN GRID ════ -->
+    <div class="dash-grid">
+
+        <!-- ── LEFT: ORDER FORM ── -->
+        <div style="animation:fadeInLeft .55s ease .3s both;">
+            <div class="dash-card">
+                <div class="dc-head">
+                    <div class="dc-title"><i class="fa-solid fa-plus-circle" style="color:var(--primary);"></i> New Order</div>
+                    <span style="font-size:11px;color:var(--muted);background:#eef1f8;padding:2px 9px;border-radius:50px;">{{ services|length }} services</span>
+                </div>
+                <div style="padding:14px 14px 16px;">
+                    <form action="/place_order" method="POST" id="orderForm" onsubmit="return onOrderSubmit()">
+                        <input type="hidden" name="service_id" id="svcIdInput">
+                        <input type="hidden" name="payment_method" id="pmInput" value="Cash">
+                        <!-- SERVICES -->
+                        <div class="mb-3">
+                            <label class="lp-label" style="margin-bottom:7px;">Select Service</label>
+                            <div class="svc-grid" id="svcGrid">
+                                {% set svc_icons=['fa-shirt','fa-droplet','fa-fire-flame-curved','fa-arrow-rotate-left','fa-wind','fa-soap'] %}
+                                {% set svc_delays=['0s','0.06s','0.12s','0.18s','0.24s','0.30s'] %}
+                                {% for s in services %}
+                                <div class="svc-tile" id="svc{{ s.id }}" onclick="pickService({{ s.id }},{{ s.price }},'{{ s.unit }}','{{ s.name }}')" style="animation:popIn .35s ease {{ svc_delays[loop.index0 if loop.index0 < 6 else 0] }} both;">
+                                    <div class="t-icon"><i class="fa-solid {{ svc_icons[loop.index0 % svc_icons|length] }}" style="color:var(--primary);"></i></div>
+                                    <div class="t-name">{{ s.name }}</div>
+                                    <div class="t-price">Rs {{ s.price }} {{ s.unit }}</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <!-- CLOTH & WEIGHT -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="lp-label">Cloth Type</label>
+                                <select name="cloth_type" class="lp-input" style="font-size:12px;padding:8px 10px;">
+                                    {% for t in ['Mixed','Cottons','Silk/Delicate','Woolens','Denim','Sportswear'] %}<option>{{ t }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="lp-label">Weight / Qty</label>
+                                <div class="qty-row">
+                                    <button type="button" class="qb" onclick="chgQty(-0.5)">−</button>
+                                    <input type="number" name="weight" class="lp-input" id="wInput" min="0.5" max="50" step="0.5" value="1" oninput="calcAmt()" style="text-align:center;font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;padding:7px 4px;">
+                                    <button type="button" class="qb" onclick="chgQty(0.5)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- DATE -->
+                        <div class="mb-3">
+                            <label class="lp-label"><i class="fa-solid fa-calendar" style="font-size:10px;"></i> Pickup Date</label>
+                            <input type="date" name="pickup_date" class="lp-input" id="pDate" style="font-size:12px;">
+                        </div>
+                        <!-- PAYMENT -->
+                        <div class="mb-3">
+                            <label class="lp-label">Payment Method</label>
+                            <div class="pm-row">
+                                {% for pm,icon,clr in [('Cash','fa-money-bill','#00c896'),('UPI','fa-qrcode','#6200ea'),('Card','fa-credit-card','#1a56ff')] %}
+                                <div class="pm-tile" id="pm{{ pm }}" onclick="pickPM('{{ pm }}')">
+                                    <i class="fa-solid {{ icon }}" style="color:{{ clr }};"></i>{{ pm }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <!-- NOTES -->
+                        <div class="mb-3">
+                            <label class="lp-label">Notes <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+                            <textarea name="notes" class="lp-input" rows="2" placeholder="Special instructions..." style="font-size:12px;resize:none;"></textarea>
+                        </div>
+                        <!-- AMOUNT BOX -->
+                        <div id="amtBox" style="display:none;">
+                            <div class="amt-box">
+                                <div><div class="amt-label">Estimated Total</div><div class="amt-value" id="amtVal">Rs 0</div><div class="amt-sub" id="amtSub"></div></div>
+                                <i class="fa-solid fa-indian-rupee-sign" style="font-size:34px;color:rgba(255,255,255,.07);position:relative;z-index:1;"></i>
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-btn" id="subBtn">
+                            <i class="fa-solid fa-basket-shopping" id="subIcon"></i>
+                            <span id="subTxt">Place Order</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT COL ── -->
+        <div style="display:flex;flex-direction:column;gap:13px;animation:fadeInRight .55s ease .3s both;">
+
+            <!-- ACTIVE ORDERS BANNER -->
+            {% if active_orders %}
+            <div class="active-banner">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+                    <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;color:#fff;display:flex;align-items:center;gap:7px;">
+                        <span style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;animation:dotPulse 1.5s infinite;"></span>
+                        Active Orders
+                    </div>
+                    <span style="background:rgba(255,255,255,.15);color:#fff;font-size:10px;padding:2px 9px;border-radius:50px;font-weight:600;">{{ active_count }} in progress</span>
+                </div>
+                {% set p={'Pending':12,'Accepted':32,'Processing':58,'Ready':82,'Delivered':100,'Cancelled':0} %}
+                {% for o in active_orders %}
+                <div class="ab-item">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+                        <div style="color:#fff;font-weight:700;font-size:12px;">#{{ o.id }} · {{ o.service_type }}</div>
+                        <span class="status-pill status-{{ o.status }}" style="font-size:10px;">{{ o.status }}</span>
+                    </div>
+                    <div style="height:3px;background:rgba(255,255,255,.18);border-radius:50px;overflow:hidden;">
+                        <div style="height:100%;width:{{ p.get(o.status,0) }}%;background:var(--accent);border-radius:50px;transition:width 1.4s ease;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                        <span style="font-size:10px;color:rgba(255,255,255,.45);">{{ o.order_date.strftime('%d %b') }}</span>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:10px;color:rgba(255,255,255,.7);font-weight:700;">Rs {{ o.amount }}</span>
+                            {% if o.status in ('Pending','Accepted') %}
+                            <button
+                                onclick="showCancelModal({{ o.id }},'{{ o.service_type }}','{{ o.status }}',{{ o.amount }})"
+                                style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:7px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.25);font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif;"
+                                onmouseover="this.style.background='rgba(255,80,60,.35)';this.style.color='#fff';this.style.borderColor='rgba(255,80,60,.5)';"
+                                onmouseout="this.style.background='rgba(255,255,255,.15)';this.style.color='rgba(255,255,255,.85)';this.style.borderColor='rgba(255,255,255,.25)';">
+                                <i class="fa-solid fa-xmark" style="font-size:9px;"></i> Cancel
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- MAIN TAB CARD -->
+            <div class="dash-card">
+                <div style="padding:12px 13px 0;">
+                    <div class="tab-bar">
+                        <button class="tab-btn active" onclick="swTab('orders',this)"><i class="fa-solid fa-list" style="margin-right:2px;"></i>Orders</button>
+                        <button class="tab-btn" onclick="swTab('spend',this)"><i class="fa-solid fa-chart-area" style="margin-right:2px;"></i>Spend</button>
+                        <button class="tab-btn" onclick="swTab('upi',this)"><i class="fa-solid fa-qrcode" style="margin-right:2px;"></i>UPI</button>
+                        <button class="tab-btn" onclick="swTab('profile',this)"><i class="fa-solid fa-user" style="margin-right:2px;"></i>Profile</button>
+                    </div>
+                </div>
+
+                <!-- ── TAB: ORDERS ── -->
+                <div class="tab-pane active" id="tab-orders">
+                    <div style="max-height:460px;overflow-y:auto;padding:12px 13px;">
+                        {% if orders %}
+                        {% set sp={'Pending':12,'Accepted':32,'Processing':58,'Ready':82,'Delivered':100,'Cancelled':0} %}
+                        {% set sc={'Pending':'#ff6b35','Accepted':'#1a56ff','Processing':'#6200ea','Ready':'#00c896','Delivered':'#00c896','Cancelled':'#c0410d'} %}
+                        {% set od=['0s','0.06s','0.12s','0.18s','0.24s','0.30s','0.36s','0.42s','0.48s','0.54s'] %}
+                        {% for o in orders %}
+                        <div class="order-item" style="animation-delay:{{ od[loop.index0 if loop.index0 < 10 else 0] }};">
+                            <div class="o-badge">#{{ o.id }}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;flex-wrap:wrap;">
+                                    <div style="font-weight:700;font-size:13px;">{{ o.service_type }}</div>
+                                    <span class="status-pill status-{{ o.status }}" style="font-size:10px;">{% if o.status=='Delivered' %}<i class="fa-solid fa-check" style="animation:checkPop .4s ease;"></i> {% endif %}{{ o.status }}</span>
+                                </div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:2px;">{{ o.cloth_type }} · {{ o.weight_kg }}kg · {{ o.order_date.strftime('%d %b %Y') }}{% if o.delivery_date %} · <i class="fa-solid fa-truck" style="font-size:9px;"></i> {{ o.delivery_date.strftime('%d %b') }}{% endif %}</div>
+                                <div class="o-prog-track"><div class="o-prog-bar" style="width:{{ sp.get(o.status,0) }}%;background:{{ sc.get(o.status,'#ccc') }};"></div></div>
+                            </div>
+                            <div style="text-align:right;flex-shrink:0;">
+                                <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:13px;color:var(--primary);">Rs {{ o.amount }}</div>
+                                <div style="font-size:10px;font-weight:700;color:{% if o.payment_status=='Paid' %}var(--success){% elif o.payment_status=='Cancelled' %}#aaa{% else %}var(--warn){% endif %};margin-top:2px;"><i class="fa-solid {% if o.payment_status=='Paid' %}fa-circle-check{% elif o.payment_status=='Cancelled' %}fa-ban{% else %}fa-clock{% endif %}" style="font-size:9px;"></i> {{ o.payment_status }}</div>
+                                {% if o.payment_status=='Pending' and o.payment_method=='UPI' %}
+                                <a href="{{ url_for('payment_page', order_id=o.id, amount=o.amount) }}" style="display:inline-block;margin-top:4px;background:var(--primary);color:#fff;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;">Pay</a>
+                                {% endif %}
+                                {% if o.status not in ('Delivered','Cancelled') %}
+                                <button
+                                    onclick="showCancelModal({{ o.id }},'{{ o.service_type }}','{{ o.status }}',{{ o.amount }})"
+                                    style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:5px 11px;border-radius:8px;background:#fff0eb;color:#ff6b35;border:1.5px solid #ffd5c2;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;font-family:'Plus Jakarta Sans',sans-serif;"
+                                    onmouseover="this.style.background='#ff6b35';this.style.color='#fff';this.style.borderColor='#ff6b35';"
+                                    onmouseout="this.style.background='#fff0eb';this.style.color='#ff6b35';this.style.borderColor='#ffd5c2';">
+                                    <i class="fa-solid fa-xmark" style="font-size:10px;"></i> Cancel
+                                </button>
+                                {% elif o.status == 'Cancelled' %}
+                                <div style="display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 10px;border-radius:8px;background:#fff0eb;color:#ff6b35;font-size:11px;font-weight:700;border:1.5px solid #ffd5c2;">
+                                    <i class="fa-solid fa-ban" style="font-size:10px;"></i> Cancelled
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div style="text-align:center;padding:40px 20px;color:var(--muted);">
+                            <i class="fa-solid fa-basket-shopping" style="font-size:42px;opacity:.13;display:block;margin-bottom:10px;animation:float 3s ease infinite;"></i>
+                            <div style="font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;margin-bottom:3px;">No orders yet</div>
+                            <div style="font-size:12px;">Use the form to place your first order!</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ── TAB: SPENDING ── -->
+                <div class="tab-pane" id="tab-spend">
+                    <div style="padding:15px 14px 10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;">
+                            <div><div style="font-size:10px;color:var(--muted);">Total spent</div><div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:22px;color:var(--ink);">Rs {{ total_spent|int }}</div></div>
+                            <div style="text-align:right;"><div style="font-size:10px;color:var(--muted);">Favourite</div><div style="font-weight:700;font-size:13px;color:var(--primary);">{{ fav_service }}</div></div>
+                        </div>
+                        <div class="chart-wrap"><canvas id="spendChart"></canvas></div>
+                        <div style="margin-top:13px;">
+                            {% set svc_t={} %}
+                            {% for o in orders %}{% if o.service_type %}{% set _=svc_t.update({o.service_type:(svc_t.get(o.service_type,0)+o.amount|float)}) %}{% endif %}{% endfor %}
+                            {% set mx=svc_t.values()|list|max if svc_t else 1 %}
+                            {% for s,t in svc_t.items() %}
+                            <div style="margin-bottom:9px;">
+                                <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;"><span style="font-weight:600;">{{ s }}</span><span style="color:var(--muted);">Rs {{ t|int }}</span></div>
+                                <div style="height:4px;background:var(--border);border-radius:50px;overflow:hidden;"><div style="height:100%;width:{{ ((t/mx)*100)|int }}%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:50px;transition:width 1.2s ease;"></div></div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB: UPI PAY ── -->
+                <div class="tab-pane" id="tab-upi">
+                    <div class="upi-section">
+                        <!-- Amount input -->
+                        <div class="upi-amt-wrap">
+                            <div class="upi-prefix">Rs</div>
+                            <input class="upi-field" type="number" id="upiAmtInput" placeholder="Enter amount" min="1" step="0.01" oninput="renderQR()" inputmode="decimal">
+                        </div>
+                        <!-- Quick preset pills -->
+                        <div class="upi-pills">
+                            {% for a in [50,100,200,500,1000] %}
+                            <button class="upi-pill" onclick="setUpiAmt({{ a }})">Rs {{ a }}</button>
+                            {% endfor %}
+                        </div>
+                        <!-- Note -->
+                        <input type="text" class="upi-note" id="upiNote" placeholder="Payment note (e.g. Order #5)" oninput="renderQR()">
+
+                        <!-- QR CARD (dark) -->
+                        <div class="qr-card">
+                            <div class="qr-card-inner">
+                                <!-- Amount display -->
+                                <div class="qr-amount-display" id="qrAmtDisplay">Rs 0</div>
+                                <div class="qr-amount-sub" id="qrAmtSub">Enter amount above to generate QR</div>
+
+                                <!-- QR Frame -->
+                                <div class="qr-frame-wrap" id="qrFrameWrap">
+                                    <div class="qr-corner tl"></div><div class="qr-corner tr"></div>
+                                    <div class="qr-corner bl"></div><div class="qr-corner br"></div>
+                                    <div class="qr-scan-line" id="qrScanLine" style="display:none;"></div>
+                                    <img id="qrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=LaundryPro&color=cccccc&bgcolor=ffffff&margin=1" width="170" height="170" alt="QR" style="opacity:.2;">
+                                    <div class="qr-placeholder" id="qrPh">
+                                        <i class="fa-solid fa-qrcode" style="font-size:28px;opacity:.25;display:block;margin-bottom:6px;"></i>
+                                        <span>Enter amount to<br>generate QR</span>
+                                    </div>
+                                </div>
+
+                                <!-- UPI ID chip -->
+                                <div class="upi-chip">
+                                    <i class="fa-solid fa-qrcode" style="color:rgba(255,255,255,.6);font-size:11px;"></i>
+                                    <span class="upi-chip-txt">{{ settings.upi_id }}</span>
+                                    <button class="upi-chip-copy" onclick="copyUPI()" title="Copy UPI ID"><i class="fa-regular fa-copy" id="upiCopyIco"></i></button>
+                                </div>
+                                <div class="qr-hint">Scan with GPay · PhonePe · Paytm · Any UPI app</div>
+
+                                <!-- Open in App buttons -->
+                                <div class="app-btns-label">Open in App</div>
+                                <div class="app-btns">
+                                    <a class="app-btn gpay" id="gpayBtn" href="#" onclick="openApp('gpay');return false;">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/64px-Google_Pay_Logo.svg.png" onerror="this.style.display='none'"> GPay
+                                    </a>
+                                    <a class="app-btn phonepe" id="phonepeBtn" href="#" onclick="openApp('phonepe');return false;">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/PhonePe_Logo.png/64px-PhonePe_Logo.png" onerror="this.style.display='none'"> PhonePe
+                                    </a>
+                                    <a class="app-btn paytm" id="paytmBtn" href="#" onclick="openApp('paytm');return false;">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/64px-Paytm_Logo_%28standalone%29.svg.png" onerror="this.style.display='none'"> Paytm
+                                    </a>
+                                    <a class="app-btn fullpg" href="{{ url_for('upi_qr') }}" id="fullUpiLink">
+                                        <i class="fa-solid fa-expand"></i> Full Page
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── TAB: PROFILE ── -->
+                <div class="tab-pane" id="tab-profile">
+                    <div style="padding:15px 14px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:13px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+                            <div class="prof-ring">{{ session.full_name[0]|upper }}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ user_profile.full_name or session.full_name }}</div>
+                                <div style="font-size:11px;color:var(--muted);">@{{ user_profile.username }}</div>
+                                <span style="background:#eef2ff;color:var(--primary);font-size:10px;padding:2px 9px;border-radius:50px;font-weight:700;margin-top:3px;display:inline-block;">Customer</span>
+                            </div>
+                            <button onclick="toggleEdit()" id="editToggleBtn" style="background:var(--primary);color:#fff;border:none;border-radius:9px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0;transition:all .2s;">
+                                <i class="fa-solid fa-pen" id="editBtnIcon"></i><span id="editBtnTxt">Edit</span>
+                            </button>
+                        </div>
+                        <!-- VIEW MODE -->
+                        <div id="viewMode">
+                            {% for icon,label,val in [
+                                ('fa-user','Name',user_profile.full_name or '–'),
+                                ('fa-envelope','Email',user_profile.email or '–'),
+                                ('fa-phone','Phone',user_profile.phone or '–'),
+                                ('fa-location-dot','Address',user_profile.address or '–'),
+                                ('fa-calendar','Member',user_profile.created_at.strftime('%d %B %Y'))
+                            ] %}
+                            <div class="info-row">
+                                <i class="fa-solid {{ icon }}"></i>
+                                <span style="color:var(--muted);font-size:11px;width:60px;flex-shrink:0;">{{ label }}</span>
+                                <span style="font-weight:500;font-size:12px;word-break:break-word;">{{ val }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <!-- EDIT MODE -->
+                        <div id="editMode" style="display:none;animation:slideTab .3s ease;">
+                            <form action="{{ url_for('update_profile') }}" method="POST" onsubmit="onProfileSave()">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-12"><label class="lp-label">Full Name</label><input type="text" name="full_name" class="lp-input" value="{{ user_profile.full_name or '' }}" style="font-size:13px;" required></div>
+                                    <div class="col-12"><label class="lp-label">Email</label><input type="email" name="email" class="lp-input" value="{{ user_profile.email or '' }}" style="font-size:13px;"></div>
+                                    <div class="col-6"><label class="lp-label">Phone</label><input type="tel" name="phone" class="lp-input" value="{{ user_profile.phone or '' }}" style="font-size:13px;" placeholder="9876543210" inputmode="tel"></div>
+                                    <div class="col-6"><label class="lp-label">Address</label><input type="text" name="address" class="lp-input" value="{{ user_profile.address or '' }}" style="font-size:13px;" placeholder="Your address"></div>
+                                </div>
+                                <div style="display:flex;gap:8px;margin-top:10px;">
+                                    <button type="button" onclick="toggleEdit()" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid var(--border);background:#fff;font-weight:600;font-size:12px;cursor:pointer;">Cancel</button>
+                                    <button type="submit" id="saveProfBtn" style="flex:2;padding:10px;border-radius:9px;background:var(--primary);color:#fff;border:none;font-family:'Outfit',sans-serif;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;"><i class="fa-solid fa-save"></i> Save Profile</button>
+                                </div>
+                            </form>
+                        </div>
+                        <!-- Mini stats -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:13px;">
+                            {% for l,v,c in [('Orders',total_orders,'#1a56ff'),('Done',delivered_count,'#00c896'),('Spent','Rs '~(total_spent|int),'#ff6b35')] %}
+                            <div style="text-align:center;padding:10px 5px;background:#f8f7f4;border-radius:10px;">
+                                <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:15px;color:{{ c }};">{{ v }}</div>
+                                <div style="font-size:10px;color:var(--muted);">{{ l }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUICK ACTIONS -->
+            <div class="dash-card" style="animation:fadeInRight .5s ease .5s both;">
+                <div class="dc-head"><div class="dc-title"><i class="fa-solid fa-bolt" style="color:#f5a623;"></i> Quick Actions</div></div>
+                <div style="padding:12px 14px;">
+                    <div class="qa-grid">
+                        {% for lbl,icon,color,action in [
+                            ('Track Orders','fa-map-location-dot','#1a56ff',"swTab('orders',null)"),
+                            ('My Spending', 'fa-chart-pie',       '#6200ea',"swTab('spend',null)"),
+                            ('Pay via UPI', 'fa-qrcode',          '#00c896',"swTab('upi',null)"),
+                            ('My Profile',  'fa-user-circle',     '#ff6b35',"swTab('profile',null)")
+                        ] %}
+                        <button class="qa-btn" onclick="{{ action }}">
+                            <div class="qa-icon" style="background:{{ color }}18;"><i class="fa-solid {{ icon }}" style="color:{{ color }};font-size:15px;"></i></div>
+                            <div>{{ lbl }}</div>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /right col -->
+    </div><!-- /dash-grid -->
+
+    <!-- ════ BOTTOM NAV (mobile) ════ -->
+    <nav class="bottom-nav" id="bottomNav">
+        <div class="bn-inner">
+            <button class="bn-btn active" id="bn-orders" onclick="bnSwitch('orders')">
+                <i class="fa-solid fa-list"></i>Orders
+                {% if pending_count > 0 %}<span class="bn-badge">{{ pending_count }}</span>{% endif %}
+            </button>
+            <button class="bn-btn" id="bn-spend" onclick="bnSwitch('spend')">
+                <i class="fa-solid fa-chart-area"></i>Spend
+            </button>
+            <button class="bn-btn" id="bn-order-new" onclick="scrollToForm()" style="color:var(--accent);">
+                <i class="fa-solid fa-plus-circle" style="font-size:22px;"></i>New
+            </button>
+            <button class="bn-btn" id="bn-upi" onclick="bnSwitch('upi')">
+                <i class="fa-solid fa-qrcode"></i>UPI
+            </button>
+            <button class="bn-btn" id="bn-profile" onclick="bnSwitch('profile')">
+                <i class="fa-solid fa-user"></i>Profile
+            </button>
+        </div>
+    </nav>
+
+<!-- ════ CANCEL ORDER MODAL ════ -->
+<div id="cancelModalOverlay"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:3000;align-items:center;justify-content:center;padding:20px;">
+
+    <div style="background:#fff;border-radius:22px;padding:30px 26px;max-width:400px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.35);animation:popIn .25s ease;position:relative;">
+
+        <!-- Warning icon -->
+        <div style="width:68px;height:68px;border-radius:50%;background:#fff0eb;border:3px solid #ffd5c2;display:flex;align-items:center;justify-content:center;font-size:28px;color:#ff6b35;margin:0 auto 18px;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+
+        <!-- Title -->
+        <div style="font-family:'Outfit',sans-serif;font-weight:800;font-size:20px;color:#0d0f14;text-align:center;margin-bottom:8px;">
+            Cancel Order?
+        </div>
+
+        <!-- Subtitle -->
+        <p style="font-size:13px;color:#6b6f7a;text-align:center;line-height:1.6;margin-bottom:20px;">
+            Are you sure you want to cancel this order?<br>
+            This action <strong style="color:#0d0f14;">cannot be undone</strong>.
+        </p>
+
+        <!-- Order details card -->
+        <div style="background:#fff0eb;border:1.5px solid #ffd5c2;border-radius:13px;padding:14px 16px;margin-bottom:22px;">
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #ffd5c2;font-size:13px;">
+                <span style="color:#6b6f7a;">Order ID</span>
+                <span style="font-weight:700;color:#0d0f14;" id="cmOrderId">–</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #ffd5c2;font-size:13px;">
+                <span style="color:#6b6f7a;">Service</span>
+                <span style="font-weight:700;color:#0d0f14;max-width:60%;text-align:right;" id="cmService">–</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dashed #ffd5c2;font-size:13px;">
+                <span style="color:#6b6f7a;">Current Status</span>
+                <span style="font-weight:700;color:#0d0f14;" id="cmStatus">–</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;">
+                <span style="color:#6b6f7a;">Amount</span>
+                <span style="font-weight:800;font-family:'Outfit',sans-serif;font-size:15px;color:#ff6b35;" id="cmAmount">–</span>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display:flex;gap:10px;">
+            <button onclick="closeCancelModal()"
+                    style="flex:1;padding:13px;border-radius:11px;border:1.5px solid #e2e0d8;background:#fff;font-family:'Outfit',sans-serif;font-weight:600;font-size:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;"
+                    onmouseover="this.style.background='#f8f7f4'" onmouseout="this.style.background='#fff'">
+                <i class="fa-solid fa-arrow-left"></i> Keep Order
+            </button>
+            <form id="cancelForm" method="POST" style="flex:1;margin:0;">
+                <button type="submit"
+                        style="width:100%;padding:13px;border-radius:11px;border:none;background:#ff6b35;color:#fff;font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 16px rgba(255,107,53,.35);"
+                        onmouseover="this.style.background='#e85a1e'" onmouseout="this.style.background='#ff6b35'">
+                    <i class="fa-solid fa-xmark"></i> Yes, Cancel It
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+</div><!-- /user-layout -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+const UPI_ID = "{{ settings.upi_id }}";
+
+// ── RIPPLE ──────────────────────────────────────────────
+document.addEventListener('click', e => {
+    const b = e.target.closest('.submit-btn,.qa-btn');
+    if (!b) return;
+    const r = document.createElement('span');
+    r.className = 'ripple-effect';
+    const rect = b.getBoundingClientRect(), sz = Math.max(rect.width,rect.height);
+    r.style.cssText = `width:${sz}px;height:${sz}px;left:${e.clientX-rect.left-sz/2}px;top:${e.clientY-rect.top-sz/2}px;`;
+    b.appendChild(r); setTimeout(()=>r.remove(),700);
+});
+
+// ── INIT ────────────────────────────────────────────────
+document.getElementById('pDate').min = new Date().toISOString().split('T')[0];
+pickPM('Cash');
+
+// ── SERVICE SELECTION ───────────────────────────────────
+let curP=0, curU='', curN='';
+function pickService(id,price,unit,name){
+    curP=price;curU=unit;curN=name;
+    document.getElementById('svcIdInput').value=id;
+    document.querySelectorAll('.svc-tile').forEach(t=>t.classList.remove('active'));
+    const t=document.getElementById('svc'+id);
+    if(t){t.classList.add('active');t.style.transform='scale(1.06)';setTimeout(()=>t.style.transform='',200);}
+    calcAmt();
+}
+
+// ── AMOUNT CALC ─────────────────────────────────────────
+function calcAmt(){
+    const w=parseFloat(document.getElementById('wInput').value)||1;
+    const total=(curP*w).toFixed(2);
+    const box=document.getElementById('amtBox');
+    if(curP>0){
+        box.style.display='block';
+        const el=document.getElementById('amtVal');
+        el.style.transform='scale(1.1)'; el.textContent='Rs '+total;
+        document.getElementById('amtSub').textContent=curN+' · '+w+' '+curU;
+        setTimeout(()=>el.style.transform='scale(1)',200);
+    }else{box.style.display='none';}
+}
+function chgQty(d){
+    const inp=document.getElementById('wInput');
+    let v=Math.max(0.5,Math.min(50,parseFloat(inp.value)+d));
+    inp.value=v.toFixed(1);
+    inp.style.transform=d>0?'scale(1.1)':'scale(0.92)';
+    setTimeout(()=>inp.style.transform='scale(1)',150);
+    calcAmt();
+}
+function pickPM(pm){
+    ['Cash','UPI','Card'].forEach(p=>document.getElementById('pm'+p)?.classList.toggle('active',p===pm));
+    document.getElementById('pmInput').value=pm;
+}
+function onOrderSubmit(){
+    if(!document.getElementById('svcIdInput').value){
+        const g=document.getElementById('svcGrid');
+        g.style.outline='3px solid var(--warn)'; g.style.borderRadius='12px';
+        g.scrollIntoView({behavior:'smooth'});
+        setTimeout(()=>{g.style.outline='';},2200);
+        return false;
+    }
+    const btn=document.getElementById('subBtn');
+    document.getElementById('subIcon').className='fa-solid fa-spinner spin-icon';
+    document.getElementById('subTxt').textContent='Placing...';
+    btn.style.opacity='.75'; btn.disabled=true;
+    return true;
+}
+
+// ── TABS ────────────────────────────────────────────────
+let chartInited=false;
+const tabMap={orders:0,spend:1,upi:2,profile:3};
+function swTab(name,el){
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tab-'+name)?.classList.add('active');
+    if(el) el.classList.add('active');
+    else document.querySelectorAll('.tab-btn')[tabMap[name]]?.classList.add('active');
+    if(name==='spend'&&!chartInited) initChart();
+    if(name==='upi') setTimeout(renderQR,100);
+}
+function scrollToForm(){
+    document.querySelector('.order-form-card, .dash-grid > div')?.scrollIntoView({behavior:'smooth'});
+}
+
+// ── BOTTOM NAV ──────────────────────────────────────────
+function bnSwitch(name){
+    document.querySelectorAll('.bn-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('bn-'+name)?.classList.add('active');
+    // Scroll to tabs section
+    document.getElementById('tab-'+name)?.closest('.dash-card')?.scrollIntoView({behavior:'smooth',block:'start'});
+    swTab(name,null);
+}
+
+// ── SPEND CHART ─────────────────────────────────────────
+function initChart(){
+    chartInited=true;
+    const raw={{ monthly_spend|safe }};
+    if(!raw.length)return;
+    new Chart(document.getElementById('spendChart'),{
+        type:'line',
+        data:{labels:raw.map(r=>r.month),datasets:[{label:'Spend (Rs)',data:raw.map(r=>r.total),borderColor:'#1a56ff',backgroundColor:'rgba(26,86,255,.08)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#1a56ff',pointBorderColor:'#fff',pointBorderWidth:2,fill:true,tension:.45}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
+    });
+}
+
+// ── UPI QR ──────────────────────────────────────────────
+function buildUPI(amt,note){
+    return `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=LaundryPro&am=${amt}&cu=INR&tn=${encodeURIComponent(note||'LaundryPro')}`;
+}
+function renderQR(){
+    const amt=parseFloat(document.getElementById('upiAmtInput').value)||0;
+    const note=document.getElementById('upiNote').value||'LaundryPro Payment';
+    const img=document.getElementById('qrImg');
+    const ph=document.getElementById('qrPh');
+    const scan=document.getElementById('qrScanLine');
+    const disp=document.getElementById('qrAmtDisplay');
+    const sub=document.getElementById('qrAmtSub');
+
+    // Update pills highlight
+    document.querySelectorAll('.upi-pill').forEach(p=>{
+        const pv=parseFloat(p.textContent.replace('Rs ',''));
+        p.classList.toggle('active',pv===amt);
+    });
+
+    if(amt>0){
+        disp.textContent='Rs '+amt.toFixed(2);
+        sub.textContent=note;
+        const upi=buildUPI(amt,note);
+        const url=`https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encodeURIComponent(upi)}&color=0d0f14&bgcolor=ffffff&margin=1`;
+        img.style.opacity='.3';
+        img.src=url;
+        img.onload=()=>{img.style.opacity='1'; ph.style.display='none'; scan.style.display='block';};
+        // Update app deep links
+        updateAppLinks(amt,note);
+        // Update full page link
+        document.getElementById('fullUpiLink').href=`/upi_qr?amount=${amt}&note=${encodeURIComponent(note)}`;
+    }else{
+        disp.textContent='Rs 0';
+        sub.textContent='Enter amount above to generate QR';
+        img.style.opacity='.2';
+        img.src='https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=LaundryPro&color=cccccc&bgcolor=ffffff&margin=1';
+        ph.style.display='flex'; scan.style.display='none';
+    }
+}
+function setUpiAmt(v){
+    document.getElementById('upiAmtInput').value=v;
+    renderQR();
+}
+function updateAppLinks(amt,note){
+    const enc=encodeURIComponent;
+    const upiStr=`pa=${enc(UPI_ID)}&pn=LaundryPro&am=${amt}&cu=INR&tn=${enc(note)}`;
+    document.getElementById('gpayBtn').href   = `tez://upi/pay?${upiStr}`;
+    document.getElementById('phonepeBtn').href= `phonepe://pay?${upiStr}`;
+    document.getElementById('paytmBtn').href  = `paytmmp://pay?${upiStr}`;
+}
+function openApp(app){
+    const amt=parseFloat(document.getElementById('upiAmtInput').value)||0;
+    if(!amt){alert('Please enter an amount first.');return;}
+    const note=document.getElementById('upiNote').value||'LaundryPro Payment';
+    const enc=encodeURIComponent;
+    const upiStr=`pa=${enc(UPI_ID)}&pn=LaundryPro&am=${amt}&cu=INR&tn=${enc(note)}`;
+    const schemes={gpay:`tez://upi/pay?${upiStr}`,phonepe:`phonepe://pay?${upiStr}`,paytm:`paytmmp://pay?${upiStr}`};
+    window.location.href=schemes[app];
+}
+function copyUPI(){
+    navigator.clipboard.writeText(UPI_ID).then(()=>{
+        const i=document.getElementById('upiCopyIco');
+        i.className='fa-solid fa-check'; i.style.color='var(--accent)';
+        setTimeout(()=>{i.className='fa-regular fa-copy';i.style.color='';},2200);
+    });
+}
+
+// ── MOBILE DRAWER ───────────────────────────────────────
+function openDrawer(){
+    document.getElementById('mobDrawer').classList.add('open');
+    document.body.style.overflow='hidden';
+}
+function closeDrawer(){
+    document.getElementById('mobDrawer').classList.remove('open');
+    document.body.style.overflow='';
+}
+
+// ── PROFILE EDIT ────────────────────────────────────────
+let editing=false;
+function toggleEdit(){
+    editing=!editing;
+    document.getElementById('viewMode').style.display=editing?'none':'block';
+    document.getElementById('editMode').style.display=editing?'block':'none';
+    const btn=document.getElementById('editToggleBtn');
+    document.getElementById('editBtnIcon').className=editing?'fa-solid fa-xmark':'fa-solid fa-pen';
+    document.getElementById('editBtnTxt').textContent=editing?'Cancel':'Edit';
+    btn.style.background=editing?'#6b6f7a':'var(--primary)';
+}
+function onProfileSave(){
+    const btn=document.getElementById('saveProfBtn');
+    btn.innerHTML='<i class="fa-solid fa-spinner spin-icon"></i> Saving...';
+    btn.disabled=true;
+}
+
+// ── STAT COUNT ANIM ─────────────────────────────────────
+document.querySelectorAll('.s-val[data-count]').forEach(el=>{
+    const raw=el.dataset.count, num=parseInt(raw.replace(/[^0-9]/g,'')), pre=raw.match(/^[^0-9]*/)?.[0]||'';
+    if(isNaN(num)||num===0)return;
+    let cur=0; const step=Math.max(1,Math.ceil(num/25));
+    const iv=setInterval(()=>{cur=Math.min(cur+step,num);el.textContent=pre+cur;if(cur>=num)clearInterval(iv);},35);
+});
+
+// ── NOTIFICATION BELL ───────────────────────────────────
+{% if notif_count > 0 %}
+const bell=document.getElementById('uBell');
+setTimeout(()=>{bell?.classList.add('bell-animate');setTimeout(()=>bell?.classList.remove('bell-animate'),700);},1200);
+setInterval(()=>{bell?.classList.add('bell-animate');setTimeout(()=>bell?.classList.remove('bell-animate'),700);},12000);
+{% endif %}
+function markAllRead(e){
+    e.stopPropagation();
+    fetch('/notifications/read',{method:'POST'}).then(()=>{
+        document.querySelectorAll('.notif-item.unread').forEach((el,i)=>setTimeout(()=>{el.classList.remove('unread');el.querySelector('.notif-dot')?.remove();},i*80));
+        const b=document.getElementById('uNotifBadge');
+        if(b){b.style.transition='transform .3s,opacity .3s';b.style.transform='scale(0)';b.style.opacity='0';setTimeout(()=>b.remove(),300);}
+    });
+}
+
+/* ── CANCEL ORDER ── */
+function showCancelModal(id, service, status, amount) {
+    document.getElementById('cmOrderId').textContent = '#' + id;
+    document.getElementById('cmService').textContent = service;
+    document.getElementById('cmStatus').textContent  = status;
+    document.getElementById('cmAmount').textContent  = 'Rs ' + parseFloat(amount).toFixed(2);
+    document.getElementById('cancelForm').action     = '/cancel_order/' + id;
+    var ov = document.getElementById('cancelModalOverlay');
+    ov.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function closeCancelModal() {
+    var ov = document.getElementById('cancelModalOverlay');
+    ov.style.display = 'none';
+    document.body.style.overflow = '';
+}
+document.getElementById('cancelModalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeCancelModal();
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCancelModal();
+});
+</script>
+{% endblock %}

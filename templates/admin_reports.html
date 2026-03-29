@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Reports – Laundry Pro{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.chart-box { background:#fff; border:1.5px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+.chart-box h6 { font-family:'Syne',sans-serif; font-weight:700; font-size:14px; margin-bottom:14px; color:var(--ink); }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+    {% include 'partials/admin_sidebar.html' with context %}
+
+    <div class="admin-content">
+        <div class="topbar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="menu-toggle" onclick="openSidebar()"><i class="fa-solid fa-bars"></i></button>
+                <div class="topbar-title">Reports & Analytics</div>
+            </div>
+            <span style="font-size:12px; color:var(--muted);">Live Data</span>
+        </div>
+
+        <div class="main-content">
+            <div class="row g-3">
+                <div class="col-12 col-lg-8">
+                    <div class="chart-box">
+                        <h6><i class="fa-solid fa-chart-bar" style="color:var(--primary); margin-right:7px;"></i>Monthly Revenue (Last 6 Months)</h6>
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="chart-box">
+                        <h6><i class="fa-solid fa-chart-pie" style="color:var(--warn); margin-right:7px;"></i>Order Status</h6>
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-8">
+                    <div class="chart-box">
+                        <h6><i class="fa-solid fa-chart-line" style="color:var(--success); margin-right:7px;"></i>Daily Revenue (Last 14 Days)</h6>
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="chart-box">
+                        <h6><i class="fa-solid fa-wallet" style="color:var(--primary); margin-right:7px;"></i>Payment Methods</h6>
+                        <canvas id="paymentChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- SERVICE PERFORMANCE -->
+                <div class="col-12">
+                    <div class="lp-card">
+                        <div class="lp-card-header">Service Performance</div>
+
+                        <!-- Mobile cards -->
+                        <div class="d-md-none p-3">
+                            {% set total_rev = service_stats|sum(attribute='total') or 1 %}
+                            {% for s in service_stats %}
+                            <div style="padding:12px 0; border-bottom:1px solid var(--border);">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                    <div style="font-weight:600; font-size:13px;">{{ s.service_type }}</div>
+                                    <div style="font-family:'Syne',sans-serif; font-weight:800; color:var(--primary); font-size:14px;">Rs {{ s.total|int }}</div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div style="flex:1; height:5px; background:var(--border); border-radius:50px; overflow:hidden;">
+                                        <div style="height:100%; width:{{ ((s.total / total_rev) * 100)|int }}%; background:var(--primary); border-radius:50px;"></div>
+                                    </div>
+                                    <span style="font-size:11px; font-weight:600; color:var(--muted); white-space:nowrap;">{{ s.cnt }} orders · {{ ((s.total / total_rev) * 100)|int }}%</span>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div style="text-align:center; padding:30px; color:var(--muted);">No data yet.</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Desktop table -->
+                        <div class="overflow-x-auto d-none d-md-block">
+                            <table class="lp-table">
+                                <thead><tr><th>Service</th><th>Orders</th><th>Revenue</th><th>Avg/Order</th><th>Share</th></tr></thead>
+                                <tbody>
+                                {% set total_rev = service_stats|sum(attribute='total') or 1 %}
+                                {% for s in service_stats %}
+                                <tr>
+                                    <td style="font-weight:600;">{{ s.service_type }}</td>
+                                    <td>{{ s.cnt }}</td>
+                                    <td style="font-family:'Syne',sans-serif; font-weight:700; color:var(--primary);">Rs {{ s.total|int }}</td>
+                                    <td>Rs {{ (s.total / s.cnt)|int }}</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <div style="flex:1; height:5px; background:var(--border); border-radius:50px; overflow:hidden;">
+                                                <div style="height:100%; width:{{ ((s.total / total_rev)*100)|int }}%; background:var(--primary); border-radius:50px;"></div>
+                                            </div>
+                                            <span style="font-size:11px; font-weight:600; color:var(--muted);">{{ ((s.total / total_rev)*100)|int }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" style="text-align:center; padding:30px; color:var(--muted);">No data yet.</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const monthly = {{ monthly|safe }};
+const daily   = {{ daily|safe }};
+const payment = {{ payment_stats|safe }};
+const status  = {{ status_stats|safe }};
+const COLORS  = ['#1a56ff','#00e5c3','#ff6b35','#6200ea','#00c896','#f5a623'];
+const isMobile = window.innerWidth < 600;
+
+new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+        labels: monthly.map(m => m.month),
+        datasets: [
+            { label: 'Revenue (Rs)', data: monthly.map(m => m.revenue), backgroundColor: '#1a56ff22', borderColor: '#1a56ff', borderWidth: 2, borderRadius: 6 },
+            { label: 'Orders', data: monthly.map(m => m.orders), backgroundColor: '#00e5c322', borderColor: '#00c896', borderWidth: 2, borderRadius: 6, yAxisID: 'y2' }
+        ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } } },
+        scales: { y: { beginAtZero: true, title: { display: !isMobile, text: 'Revenue (Rs)' } }, y2: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: !isMobile, text: 'Orders' } } } }
+});
+
+new Chart(document.getElementById('dailyChart'), {
+    type: 'line',
+    data: { labels: daily.map(d => d.day), datasets: [{ label: 'Revenue (Rs)', data: daily.map(d => d.revenue), borderColor: '#00c896', backgroundColor: '#00c89614', borderWidth: 2.5, pointRadius: 4, fill: true, tension: 0.4 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: { labels: status.map(s => s.status), datasets: [{ data: status.map(s => s.cnt), backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+});
+
+new Chart(document.getElementById('paymentChart'), {
+    type: 'doughnut',
+    data: { labels: payment.map(p => p.payment_method), datasets: [{ data: payment.map(p => p.total), backgroundColor: ['#1a56ff','#ff6b35','#6200ea'], borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard – Laundry Pro{% endblock %}
+
+{% block head %}
+<style>
+/* ── ANIMATIONS ────────────────────────────────────────── */
+@keyframes fadeInUp   { from{ opacity:0; transform:translateY(24px); } to{ opacity:1; transform:translateY(0); } }
+@keyframes fadeInLeft { from{ opacity:0; transform:translateX(-24px); } to{ opacity:1; transform:translateX(0); } }
+@keyframes countUp    { from{ opacity:0; transform:scale(0.7); } to{ opacity:1; transform:scale(1); } }
+@keyframes shimmer    { 0%{ background-position:-400px 0; } 100%{ background-position:400px 0; } }
+@keyframes ripple     { 0%{ transform:scale(0); opacity:.5; } 100%{ transform:scale(4); opacity:0; } }
+@keyframes bellShake  { 0%,100%{transform:rotate(0);} 20%{transform:rotate(15deg);} 40%{transform:rotate(-12deg);} 60%{transform:rotate(8deg);} 80%{transform:rotate(-5deg);} }
+@keyframes slideInRow { from{ opacity:0; transform:translateX(20px); } to{ opacity:1; transform:translateX(0); } }
+@keyframes pulseGlow  { 0%,100%{ box-shadow:0 0 0 0 rgba(26,86,255,.3); } 50%{ box-shadow:0 0 0 8px rgba(26,86,255,0); } }
+@keyframes popIn      { 0%{ transform:scale(0.85); opacity:0; } 70%{ transform:scale(1.04); } 100%{ transform:scale(1); opacity:1; } }
+@keyframes spin       { to{ transform:rotate(360deg); } }
+
+/* Stat cards staggered */
+.stat-card { animation: fadeInUp .5s ease both; }
+.stat-card:nth-child(1){ animation-delay:.05s; }
+.stat-card:nth-child(2){ animation-delay:.12s; }
+.stat-card:nth-child(3){ animation-delay:.19s; }
+.stat-card:nth-child(4){ animation-delay:.26s; }
+
+/* Table rows slide in */
+.lp-table tbody tr { animation: slideInRow .35s ease both; }
+{% for i in range(20) %}.lp-table tbody tr:nth-child({{ i+1 }}){ animation-delay:{{ 0.04 * i }}s; }
+{% endfor %}
+
+/* Skeleton shimmer for loading */
+.skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%); background-size:400px 100%; animation: shimmer 1.2s infinite; border-radius:8px; }
+
+/* Ripple on buttons */
+.btn-primary-custom { position:relative; overflow:hidden; }
+.ripple-effect { position:absolute; border-radius:50%; background:rgba(255,255,255,.4); transform:scale(0); animation:ripple .6s linear; pointer-events:none; }
+
+/* Bell animation when new notif */
+.bell-animate { animation: bellShake .6s ease; }
+
+/* Status pill hover */
+.status-pill { transition: transform .15s, box-shadow .15s; cursor:default; }
+.status-pill:hover { transform:scale(1.08); box-shadow:0 2px 8px rgba(0,0,0,.12); }
+
+/* Row hover highlight */
+.lp-table tbody tr { transition: background .15s, transform .15s; }
+.lp-table tbody tr:hover { background:#f0f4ff !important; transform:translateX(3px); }
+
+/* Update button pulse on pending rows */
+.row-pending .update-btn { animation: pulseGlow 2s infinite; }
+
+/* Notification badge pop */
+.notif-badge { animation: popIn .3s ease; }
+
+/* Card hover lift */
+.lp-card { transition: box-shadow .2s; }
+.lp-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.1); }
+
+/* Topbar */
+.topbar { animation: fadeInLeft .4s ease; }
+
+/* Loading spinner */
+.spin-icon { animation: spin .8s linear infinite; display:inline-block; }
+
+/* Notif item hover */
+.notif-item { transition: background .15s; cursor:pointer; }
+.notif-item:hover { background:#f5f8ff; }
+
+/* Mark all read button */
+.mark-all-btn { background:none; border:none; color:var(--primary); font-size:11px; font-weight:700; cursor:pointer; padding:3px 8px; border-radius:6px; transition:background .15s; }
+.mark-all-btn:hover { background:#eef2ff; }
+
+/* Modal pop-in */
+.modal.show .modal-dialog { animation: popIn .25s ease; }
+
+/* Status badge in update modal */
+.status-option { display:flex; align-items:center; gap:8px; padding:9px 12px; border:1.5px solid var(--border); border-radius:10px; cursor:pointer; font-size:13px; font-weight:500; transition:all .2s; }
+.status-option:hover { border-color:var(--primary); background:#f0f4ff; }
+.status-option.selected { border-color:var(--primary); background:#eef2ff; color:var(--primary); font-weight:700; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+    {% include 'partials/admin_sidebar.html' with context %}
+
+    <div class="admin-content">
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="menu-toggle" onclick="openSidebar()"><i class="fa-solid fa-bars"></i></button>
+                <div class="topbar-title">Dashboard</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px;">
+                <!-- Notification Bell -->
+                <div class="notif-bell" onclick="toggleNotif('adminNotifDrop')" id="notifBell">
+                    <i class="fa-solid fa-bell" style="font-size:18px; color:var(--muted);"></i>
+                    {% if notif_count > 0 %}
+                    <span class="notif-badge" id="notifBadge">{{ notif_count }}</span>
+                    {% endif %}
+                    <div class="notif-dropdown" id="adminNotifDrop">
+                        <!-- Header with Mark All Read -->
+                        <div style="padding:12px 14px; font-family:'Outfit',sans-serif; font-weight:700; font-size:13px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+                            <span><i class="fa-solid fa-bell" style="color:var(--primary); margin-right:6px;"></i>Notifications</span>
+                            <button class="mark-all-btn" onclick="markAllRead(event)" id="markAllBtn">
+                                <i class="fa-solid fa-check-double"></i> Mark all read
+                            </button>
+                        </div>
+
+                        <!-- Notification list -->
+                        <div id="notifList" style="max-height:320px; overflow-y:auto;">
+                            {% for n in notifications %}
+                            <div class="notif-item {{ 'unread' if not n.is_read }}" id="notif-{{ n.id }}">
+                                {% if not n.is_read %}
+                                <div class="notif-dot" style="flex-shrink:0; margin-top:4px;"></div>
+                                {% else %}
+                                <div style="width:7px; flex-shrink:0;"></div>
+                                {% endif %}
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:12px; line-height:1.5;">{{ n.message }}</div>
+                                    <div style="font-size:10px; color:var(--muted); margin-top:2px;">
+                                        <i class="fa-regular fa-clock" style="font-size:9px;"></i>
+                                        {{ n.created_at.strftime('%d %b, %I:%M %p') }}
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="notif-item">
+                                <div style="color:var(--muted); font-size:12px; text-align:center; width:100%; padding:10px 0;">
+                                    <i class="fa-solid fa-bell-slash" style="font-size:20px; opacity:.3; display:block; margin-bottom:6px;"></i>
+                                    No notifications yet.
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Footer -->
+                        <div style="padding:10px 14px; border-top:1px solid var(--border); text-align:center;">
+                            <span style="font-size:11px; color:var(--muted);">{{ notif_count }} unread</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:9px;">
+                    <div style="width:32px; height:32px; border-radius:50%; background:var(--primary); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px;">
+                        {{ session.full_name[0]|upper }}
+                    </div>
+                    <span style="font-size:12px; color:var(--muted);" class="d-none d-md-inline">{{ session.full_name }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- STAT CARDS -->
+            <div class="row g-3 mb-4">
+                {% for label, val, icon, color, sub in [
+                    ("Today's Orders", today_orders,  'fa-basket-shopping','#1a56ff','orders today'),
+                    ('Pending',        pending_count, 'fa-clock',          '#ff6b35','need action'),
+                    ('Total Users',    user_count,    'fa-users',          '#6200ea','customers'),
+                    ('Monthly Revenue','Rs '~(monthly_revenue|int),'fa-indian-rupee-sign','#00c896','this month')
+                ] %}
+                <div class="col-6 col-lg-3">
+                    <div class="stat-card" style="color:{{ color }}">
+                        <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:12px;">
+                            <div class="stat-icon" style="background:{{ color }}18; margin-bottom:0;">
+                                <i class="fa-solid {{ icon }}" style="color:{{ color }}"></i>
+                            </div>
+                            <div style="width:36px; height:36px; border-radius:50%; background:{{ color }}10; display:flex; align-items:center; justify-content:center;">
+                                <i class="fa-solid fa-arrow-trend-up" style="color:{{ color }}; font-size:12px; opacity:.6;"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" data-count="{{ val }}">{{ val }}</div>
+                        <div class="stat-label">{{ label }} <span style="opacity:.6;">· {{ sub }}</span></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- ORDERS TABLE -->
+            <div class="lp-card" id="orders" style="animation: fadeInUp .5s ease .3s both;">
+                <div class="lp-card-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span>All Orders</span>
+                        {% if pending_count > 0 %}
+                        <span style="background:var(--warn); color:#fff; font-size:10px; padding:2px 8px; border-radius:50px; font-weight:700; animation:pulseGlow 2s infinite;">
+                            {{ pending_count }} pending
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <a href="{{ url_for('admin_reports') }}" class="btn-primary-custom" style="padding:7px 14px; font-size:12px;">
+                            <i class="fa-solid fa-chart-line"></i> <span class="btn-text-hide-mobile">Reports</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="lp-table">
+                        <thead>
+                            <tr>
+                                <th>#</th><th>Customer</th><th>Service</th>
+                                <th class="d-none d-md-table-cell">Weight</th>
+                                <th>Amount</th>
+                                <th class="d-none d-sm-table-cell">Payment</th>
+                                <th>Status</th>
+                                <th class="d-none d-lg-table-cell">Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for o in orders %}
+                        <tr class="{{ 'row-pending' if o.status == 'Pending' }}" id="order-row-{{ o.id }}">
+                            <td><strong style="font-family:'Outfit',sans-serif;">#{{ o.id }}</strong></td>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div style="width:28px; height:28px; border-radius:50%; background:var(--primary)18; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--primary); flex-shrink:0;">
+                                        {{ (o.full_name or o.username)[0]|upper }}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600; font-size:12px;">{{ (o.full_name or o.username)[:12] }}</div>
+                                        <div style="font-size:10px; color:var(--muted);" class="d-none d-sm-block">@{{ o.username }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="font-size:12px;">{{ o.service_type }}</td>
+                            <td class="d-none d-md-table-cell" style="font-size:12px;">{{ o.weight_kg }}kg</td>
+                            <td style="font-family:'Outfit',sans-serif; font-weight:800; font-size:13px; color:var(--primary);">Rs {{ o.amount }}</td>
+                            <td class="d-none d-sm-table-cell">
+                                <div style="font-size:11px;">{{ o.payment_method }}</div>
+                                <div style="font-size:11px; font-weight:700; color:{% if o.payment_status=='Paid' %}var(--success){% elif o.payment_status=='Cancelled' %}#aaa{% else %}var(--warn){% endif %};">
+                                    <i class="fa-solid {% if o.payment_status=='Paid' %}fa-circle-check{% elif o.payment_status=='Cancelled' %}fa-ban{% else %}fa-clock{% endif %}" style="font-size:9px;"></i>
+                                    {{ o.payment_status }}
+                                </div>
+                            </td>
+                            <td><span class="status-pill status-{{ o.status }}">{{ o.status }}</span></td>
+                            <td class="d-none d-lg-table-cell" style="font-size:11px; color:var(--muted);">{{ o.order_date.strftime('%d %b %Y') }}</td>
+                            <td>
+                                <button class="btn-primary-custom update-btn" style="padding:5px 10px; font-size:11px; border-radius:7px; white-space:nowrap;"
+                                    onclick="openUpdateModal({{ o.id }},'{{ o.status }}','{{ o.payment_status }}','{{ o.pickup_date or '' }}','{{ o.delivery_date or '' }}',this)">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <span class="btn-text-hide-mobile">Update</span>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- UPDATE ORDER MODAL -->
+<div class="modal fade lp-modal" id="updateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-syne">
+                    <i class="fa-solid fa-pen-to-square" style="color:var(--primary); margin-right:8px;"></i>
+                    Update Order <span id="modalOrderId" style="color:var(--primary);"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/update_order" method="POST" id="updateForm" onsubmit="onFormSubmit(this)">
+                <div class="modal-body">
+                    <input type="hidden" name="order_id" id="modalOrderIdInput">
+
+                    <!-- STATUS SELECTOR -->
+                    <div class="mb-4">
+                        <label class="lp-label">Order Status</label>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;" id="statusGrid">
+                            {% set status_icons = {'Pending':'fa-clock','Accepted':'fa-thumbs-up','Processing':'fa-soap','Ready':'fa-box-open','Delivered':'fa-circle-check','Cancelled':'fa-ban'} %}
+                            {% set status_colors = {'Pending':'#ff6b35','Accepted':'#1a56ff','Processing':'#6200ea','Ready':'#00c896','Delivered':'#00c896','Cancelled':'#c0410d'} %}
+                            {% for s in ['Pending','Accepted','Processing','Ready','Delivered','Cancelled'] %}
+                            <div class="status-option" onclick="selectStatus('{{ s }}')" data-status="{{ s }}" id="opt-{{ s }}">
+                                <i class="fa-solid {{ status_icons[s] }}" style="color:{{ status_colors[s] }}; font-size:14px;"></i>
+                                {{ s }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="status" id="modalStatus">
+                    </div>
+
+                    <!-- PAYMENT STATUS -->
+                    <div class="mb-3">
+                        <label class="lp-label">Payment Status</label>
+                        <div style="display:flex;gap:8px;margin-top:5px;">
+                            {% for ps, pcolor, picon in [('Pending','#ff6b35','fa-clock'),('Paid','#00c896','fa-circle-check'),('Cancelled','#aaa','fa-ban')] %}
+                            <div id="popt-{{ ps }}" onclick="selectPayStatus('{{ ps }}')"
+                                 style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;color:var(--muted);">
+                                <i class="fa-solid {{ picon }}" style="color:{{ pcolor }};font-size:13px;"></i> {{ ps }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="payment_status" id="modalPayStatus">
+                    </div>
+
+                    <!-- DATES -->
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="lp-label"><i class="fa-solid fa-truck-pickup" style="font-size:10px;"></i> Pickup Date</label>
+                            <input type="date" name="pickup_date" class="lp-input" id="modalPickup">
+                        </div>
+                        <div class="col-6">
+                            <label class="lp-label"><i class="fa-solid fa-truck" style="font-size:10px;"></i> Delivery Date</label>
+                            <input type="date" name="delivery_date" class="lp-input" id="modalDelivery">
+                        </div>
+                    </div>
+
+                    <!-- BANNERS -->
+                    <div id="deliveryBanner" style="display:none;margin-top:12px;background:#e8faf4;border:1.5px solid var(--success);border-radius:10px;padding:11px 14px;">
+                        <div style="display:flex;align-items:center;gap:8px;color:#007a55;font-weight:600;font-size:13px;">
+                            <i class="fa-solid fa-circle-check"></i>
+                            Payment will be automatically marked as <strong>PAID</strong>
+                        </div>
+                        <div style="font-size:11px;color:#007a55;margin-top:2px;opacity:.8;">A credit entry will also be added to the expense ledger.</div>
+                    </div>
+                    <div id="cancelledBanner" style="display:none;margin-top:12px;background:#fff0eb;border:1.5px solid #ffd5c2;border-radius:10px;padding:11px 14px;">
+                        <div style="display:flex;align-items:center;gap:8px;color:#c0410d;font-weight:600;font-size:13px;">
+                            <i class="fa-solid fa-ban"></i>
+                            Payment status will be set to <strong>Cancelled</strong>
+                        </div>
+                        <div style="font-size:11px;color:#c0410d;margin-top:2px;opacity:.8;">No payment will be collected for this order.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-custom" id="submitBtn" style="border-radius:8px;">
+                        <i class="fa-solid fa-save" id="submitIcon"></i>
+                        <span id="submitText">Save Changes</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── RIPPLE EFFECT on all primary buttons ──────────────────
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-primary-custom');
+    if (!btn) return;
+    const r = document.createElement('span');
+    r.classList.add('ripple-effect');
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    r.style.cssText = `width:${size}px; height:${size}px; left:${e.clientX-rect.left-size/2}px; top:${e.clientY-rect.top-size/2}px;`;
+    btn.appendChild(r);
+    setTimeout(() => r.remove(), 700);
+});
+
+// ── STATUS SELECTOR ───────────────────────────────────────
+let currentStatus = '';
+function selectStatus(s) {
+    currentStatus = s;
+    document.getElementById('modalStatus').value = s;
+    document.querySelectorAll('.status-option').forEach(el => el.classList.remove('selected'));
+    document.getElementById('opt-' + s)?.classList.add('selected');
+    // Banners
+    document.getElementById('deliveryBanner').style.display  = s === 'Delivered'  ? 'block' : 'none';
+    document.getElementById('cancelledBanner').style.display = s === 'Cancelled'  ? 'block' : 'none';
+    // Auto-suggest payment status
+    if (s === 'Delivered')  selectPayStatus('Paid');
+    if (s === 'Cancelled')  selectPayStatus('Cancelled');
+}
+
+// ── PAYMENT STATUS SELECTOR ───────────────────────────────
+function selectPayStatus(ps) {
+    document.getElementById('modalPayStatus').value = ps;
+    ['Pending','Paid','Cancelled'].forEach(p => {
+        const el = document.getElementById('popt-' + p);
+        if (!el) return;
+        el.style.borderColor  = p === ps ? (ps==='Paid'?'var(--success)':ps==='Cancelled'?'#aaa':'var(--warn)') : 'var(--border)';
+        el.style.background   = p === ps ? (ps==='Paid'?'#e8faf4':ps==='Cancelled'?'#f5f5f5':'#fff0eb') : '#fff';
+        el.style.color        = p === ps ? (ps==='Paid'?'#007a55':ps==='Cancelled'?'#888':'#c06000') : 'var(--muted)';
+    });
+}
+
+// ── OPEN UPDATE MODAL ─────────────────────────────────────
+function openUpdateModal(id, status, payStatus, pickup, delivery, btn) {
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner spin-icon"></i>';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i><span class="btn-text-hide-mobile"> Update</span>';
+        }, 500);
+    }
+    document.getElementById('modalOrderId').textContent = '#' + id;
+    document.getElementById('modalOrderIdInput').value  = id;
+    document.getElementById('modalPickup').value        = pickup;
+    document.getElementById('modalDelivery').value      = delivery;
+    selectStatus(status);
+    // Pre-select current payment status (don't override if Delivered/Cancelled auto-set)
+    if (status !== 'Delivered' && status !== 'Cancelled') {
+        selectPayStatus(payStatus || 'Pending');
+    }
+    new bootstrap.Modal(document.getElementById('updateModal')).show();
+}
+
+// ── FORM SUBMIT ANIMATION ─────────────────────────────────
+function onFormSubmit(form) {
+    const btn  = document.getElementById('submitBtn');
+    const icon = document.getElementById('submitIcon');
+    const txt  = document.getElementById('submitText');
+    icon.className = 'fa-solid fa-spinner spin-icon';
+    txt.textContent = 'Saving...';
+    btn.style.opacity = '.8';
+    btn.disabled = true;
+}
+
+// ── MARK ALL READ (Admin) ────────────────────────────────
+function markAllRead(e) {
+    e.stopPropagation();
+    const btn = document.getElementById('markAllBtn');
+    btn.innerHTML = '<i class="fa-solid fa-spinner spin-icon"></i> Reading...';
+    btn.disabled = true;
+
+    fetch('/admin/notifications/read_all', { method: 'POST' })
+        .then(r => r.json())
+        .then(() => {
+            // Animate all unread items to read
+            document.querySelectorAll('.notif-item.unread').forEach((el, i) => {
+                setTimeout(() => {
+                    el.style.transition = 'background .4s, opacity .4s';
+                    el.classList.remove('unread');
+                    el.querySelector('.notif-dot')?.remove();
+                }, i * 80);
+            });
+            // Remove badge
+            const badge = document.getElementById('notifBadge');
+            if (badge) {
+                badge.style.transition = 'transform .3s, opacity .3s';
+                badge.style.transform  = 'scale(0)';
+                badge.style.opacity    = '0';
+                setTimeout(() => badge.remove(), 300);
+            }
+            // Update footer
+            document.querySelector('#adminNotifDrop [style*="unread"]');
+            btn.innerHTML = '<i class="fa-solid fa-check-double"></i> All read!';
+            btn.style.color = 'var(--success)';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Mark all read';
+                btn.style.color = '';
+                btn.disabled = false;
+            }, 2000);
+            // Update footer count
+            const footer = document.querySelector('#adminNotifDrop [style*="unread"]');
+            document.querySelector('#adminNotifDrop > div:last-child span').textContent = '0 unread';
+        })
+        .catch(() => {
+            btn.innerHTML = '<i class="fa-solid fa-check-double"></i> Mark all read';
+            btn.disabled = false;
+        });
+}
+
+// ── BELL SHAKE on new notifications ──────────────────────
+{% if notif_count > 0 %}
+const bell = document.getElementById('notifBell');
+setInterval(() => {
+    bell?.classList.add('bell-animate');
+    setTimeout(() => bell?.classList.remove('bell-animate'), 700);
+}, 8000);
+{% endif %}
+
+// ── STAT CARD NUMBER ANIMATION ────────────────────────────
+document.querySelectorAll('.stat-value[data-count]').forEach(el => {
+    const raw   = el.dataset.count;
+    const num   = parseInt(raw.replace(/[^0-9]/g, ''));
+    const prefix = raw.replace(/[0-9,]+/, '');
+    if (isNaN(num)) return;
+    let current = 0;
+    const step  = Math.ceil(num / 30);
+    const iv = setInterval(() => {
+        current = Math.min(current + step, num);
+        el.textContent = prefix + current;
+        if (current >= num) clearInterval(iv);
+    }, 30);
+});
+
+// ── TABLE ROW HOVER STATUS TOOLTIP ───────────────────────
+document.querySelectorAll('.lp-table tbody tr').forEach(row => {
+    row.addEventListener('mouseenter', function() {
+        this.style.cursor = 'pointer';
+    });
+});
+</script>
+{% endblock %}

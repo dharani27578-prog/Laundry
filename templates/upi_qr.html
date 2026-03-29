@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% block title %}UPI Payment – Laundry Pro{% endblock %}
+
+{% block head %}
+<style>
+@keyframes fadeInUp  { from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);} }
+@keyframes popIn     { 0%{transform:scale(.8);opacity:0;} 65%{transform:scale(1.05);} 100%{transform:scale(1);opacity:1;} }
+@keyframes spin      { to{transform:rotate(360deg);} }
+@keyframes pulse     { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+@keyframes scanLine  { 0%{top:0;} 100%{top:100%;} }
+@keyframes countDown { from{stroke-dashoffset:0;} to{stroke-dashoffset:283;} }
+@keyframes shimmer   { 0%{background-position:-400px 0;} 100%{background-position:400px 0;} }
+@keyframes gradShift { 0%,100%{background-position:0% 50%;} 50%{background-position:100% 50%;} }
+
+.payment-page { min-height:100vh; background:linear-gradient(135deg,#0d0f14 0%,#1a1f35 60%,#0d1628 100%); background-size:300% 300%; animation:gradShift 8s ease infinite; display:flex; flex-direction:column; align-items:center; padding:24px 16px 40px; }
+
+.back-link { display:flex; align-items:center; gap:8px; color:rgba(255,255,255,.5); font-size:13px; font-weight:500; align-self:flex-start; margin-bottom:20px; transition:color .2s; cursor:pointer; border:none; background:none; padding:0; }
+.back-link:hover { color:#fff; }
+
+.pay-card { background:#fff; border-radius:24px; width:100%; max-width:440px; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.4); animation:popIn .5s ease; }
+
+.pay-header { background:linear-gradient(135deg,#1a56ff,#3d6fff); padding:24px; text-align:center; position:relative; overflow:hidden; }
+.pay-header::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 80% 30%,rgba(0,229,195,.25),transparent 60%); }
+.pay-header .brand { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:#fff; letter-spacing:-.02em; position:relative; }
+.pay-header .brand span { color:var(--accent); }
+.pay-header .sub { font-size:12px; color:rgba(255,255,255,.6); margin-top:3px; position:relative; }
+
+.amount-display { text-align:center; padding:24px 24px 0; }
+.amount-big { font-family:'Syne',sans-serif; font-size:48px; font-weight:800; color:var(--ink); letter-spacing:-.02em; animation:fadeInUp .4s ease .1s both; }
+.amount-input-wrap { display:flex; align-items:center; gap:0; border:2px solid var(--border); border-radius:14px; overflow:hidden; margin-top:14px; transition:border .2s; }
+.amount-input-wrap:focus-within { border-color:var(--primary); box-shadow:0 0 0 3px rgba(26,86,255,.12); }
+.amount-prefix { padding:12px 14px; background:#f8f7f4; color:var(--muted); font-family:'Syne',sans-serif; font-weight:700; font-size:18px; border-right:2px solid var(--border); }
+.amount-field  { flex:1; border:none; outline:none; padding:12px 14px; font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:var(--ink); background:#fff; }
+.amount-field::placeholder { color:#ccc; font-size:18px; }
+
+/* Quick amount pills */
+.quick-amounts { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:14px 0; }
+.qa-pill { padding:7px 16px; border-radius:50px; border:1.5px solid var(--border); background:#fff; font-size:13px; font-weight:700; cursor:pointer; transition:all .2s; color:var(--ink); }
+.qa-pill:hover, .qa-pill.active { background:var(--primary); color:#fff; border-color:var(--primary); transform:scale(1.05); }
+
+/* QR section */
+.qr-section { padding:20px 24px; text-align:center; }
+.qr-frame { position:relative; display:inline-block; padding:16px; background:#fff; border-radius:18px; border:3px solid var(--ink); box-shadow:0 8px 32px rgba(0,0,0,.12); }
+.qr-frame img { display:block; border-radius:8px; }
+.qr-scan-line { position:absolute; left:16px; right:16px; height:2px; background:linear-gradient(90deg,transparent,var(--primary),transparent); animation:scanLine 2s ease-in-out infinite alternate; top:16px; }
+.qr-corner { position:absolute; width:20px; height:20px; border-color:var(--primary); border-style:solid; }
+.qr-corner.tl { top:6px; left:6px; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+.qr-corner.tr { top:6px; right:6px; border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
+.qr-corner.bl { bottom:6px; left:6px; border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
+.qr-corner.br { bottom:6px; right:6px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+
+.upi-id-box { display:flex; align-items:center; justify-content:center; gap:8px; background:#f0f4ff; border:1.5px solid rgba(26,86,255,.2); border-radius:12px; padding:10px 16px; margin:14px 0; }
+.upi-id-text { font-family:'Syne',sans-serif; font-weight:700; font-size:15px; color:var(--primary); }
+
+/* Timer ring */
+.timer-wrap { display:flex; flex-direction:column; align-items:center; margin:6px 0 16px; }
+.timer-ring-svg { transform:rotate(-90deg); }
+.timer-ring-bg   { fill:none; stroke:#f0f0f0; stroke-width:5; }
+.timer-ring-fill { fill:none; stroke:var(--warn); stroke-width:5; stroke-linecap:round; stroke-dasharray:283; transition:stroke-dashoffset .9s linear; }
+.timer-text { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--ink); }
+.timer-label { font-size:11px; color:var(--muted); margin-top:2px; }
+
+/* Steps */
+.steps-list { list-style:none; text-align:left; margin:0 24px 16px; }
+.step-row { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+.step-row:last-child { border-bottom:none; }
+.step-num { width:26px; height:26px; border-radius:50%; background:var(--primary); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.step-text { font-size:13px; line-height:1.5; }
+
+/* Confirm button */
+.confirm-btn { display:block; width:calc(100% - 48px); margin:0 24px 16px; padding:15px; border-radius:14px; background:linear-gradient(135deg,var(--success),#00a878); color:#fff; border:none; cursor:pointer; font-family:'Syne',sans-serif; font-weight:700; font-size:16px; text-align:center; transition:all .2s; box-shadow:0 4px 20px rgba(0,200,150,.35); }
+.confirm-btn:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,200,150,.45); }
+.skip-link  { display:block; text-align:center; color:var(--muted); font-size:13px; padding-bottom:20px; cursor:pointer; }
+.skip-link:hover { color:var(--ink); }
+
+/* Note input */
+.note-field { width:calc(100% - 48px); margin:0 24px 14px; display:block; border:1.5px solid var(--border); border-radius:11px; padding:10px 14px; font-size:13px; font-family:'DM Sans',sans-serif; color:var(--ink); transition:border .2s; }
+.note-field:focus { outline:none; border-color:var(--primary); }
+
+/* Share/Copy buttons */
+.action-row { display:flex; gap:10px; padding:0 24px 20px; }
+.act-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; padding:11px; border-radius:11px; border:1.5px solid var(--border); background:#fff; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; color:var(--ink); }
+.act-btn:hover { border-color:var(--primary); background:#f0f4ff; color:var(--primary); }
+
+@media(max-width:480px) {
+    .payment-page { padding:14px 12px 30px; }
+    .amount-big { font-size:36px; }
+    .amount-field { font-size:20px; }
+    .pay-card { border-radius:18px; }
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="payment-page">
+    <button class="back-link" onclick="history.back()">
+        <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+    </button>
+
+    <div class="pay-card">
+        <!-- HEADER -->
+        <div class="pay-header">
+            <div class="brand">LAUNDRY<span>PRO</span></div>
+            <div class="sub">Secure UPI Payment Gateway</div>
+        </div>
+
+        <!-- AMOUNT INPUT -->
+        <div class="amount-display">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Enter Amount</div>
+            <div class="amount-input-wrap">
+                <div class="amount-prefix">Rs</div>
+                <input class="amount-field" type="number" id="amountInput" placeholder="0.00" min="1" step="0.01"
+                       value="{{ amount }}" oninput="updateQR()" onchange="updateQR()">
+            </div>
+            <!-- Quick amount pills -->
+            <div class="quick-amounts" id="quickAmounts">
+                {% for a in [50, 100, 150, 200, 500, 1000] %}
+                <button class="qa-pill {% if amount|float == a %}active{% endif %}" onclick="setAmount({{ a }})">Rs {{ a }}</button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- NOTE -->
+        <input type="text" class="note-field" id="noteInput" placeholder="Payment note (e.g. Order #5)" value="{{ note }}">
+
+        <!-- QR CODE -->
+        <div class="qr-section">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Scan with any UPI app</div>
+            <div class="qr-frame" id="qrFrame">
+                <div class="qr-corner tl"></div>
+                <div class="qr-corner tr"></div>
+                <div class="qr-corner bl"></div>
+                <div class="qr-corner br"></div>
+                <div class="qr-scan-line"></div>
+                <img id="qrImg" src="" alt="UPI QR" width="200" height="200" style="border-radius:8px;">
+            </div>
+
+            <!-- UPI ID display -->
+            <div class="upi-id-box">
+                <i class="fa-solid fa-qrcode" style="color:var(--primary);font-size:14px;"></i>
+                <span class="upi-id-text" id="upiIdDisplay">{{ settings.upi_id }}</span>
+                <button onclick="copyUPI()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;" title="Copy UPI ID">
+                    <i class="fa-regular fa-copy" id="copyIcon"></i>
+                </button>
+            </div>
+
+            <!-- Timer -->
+            <div class="timer-wrap">
+                <svg class="timer-ring-svg" width="70" height="70">
+                    <circle class="timer-ring-bg" cx="35" cy="35" r="30"/>
+                    <circle class="timer-ring-fill" cx="35" cy="35" r="30" id="timerRing"/>
+                </svg>
+                <div style="margin-top:-58px;margin-bottom:16px;">
+                    <div class="timer-text" id="timerText">10:00</div>
+                </div>
+                <div class="timer-label">QR expires in</div>
+            </div>
+        </div>
+
+        <!-- HOW TO PAY STEPS -->
+        <ul class="steps-list">
+            <li class="step-row"><div class="step-num">1</div><div class="step-text">Open <strong>GPay, PhonePe, Paytm</strong> or any UPI app</div></li>
+            <li class="step-row"><div class="step-num">2</div><div class="step-text">Tap <strong>Scan QR</strong> and scan the code above</div></li>
+            <li class="step-row"><div class="step-num">3</div><div class="step-text">Confirm amount <strong>Rs <span id="stepAmount">{{ amount }}</span></strong> and pay</div></li>
+            <li class="step-row"><div class="step-num">4</div><div class="step-text">Click <strong>"I Have Paid"</strong> after successful payment</div></li>
+        </ul>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-row">
+            <button class="act-btn" onclick="copyUPI()"><i class="fa-regular fa-copy"></i> Copy UPI ID</button>
+            <button class="act-btn" onclick="refreshQR()"><i class="fa-solid fa-rotate-right"></i> Refresh QR</button>
+        </div>
+
+        <!-- CONFIRM BUTTON -->
+        {% if request.args.get('order_id') %}
+        <form action="{{ url_for('confirm_payment', order_id=request.args.get('order_id')) }}" method="POST">
+            <button type="submit" class="confirm-btn">
+                <i class="fa-solid fa-circle-check"></i> I Have Paid — Rs <span id="confirmAmt">{{ amount }}</span>
+            </button>
+        </form>
+        {% else %}
+        <button class="confirm-btn" onclick="showPaidConfirm()">
+            <i class="fa-solid fa-circle-check"></i> I Have Paid — Rs <span id="confirmAmt">{{ amount }}</span>
+        </button>
+        {% endif %}
+        <a class="skip-link" href="{{ url_for('user_dashboard') }}">Pay later (Cash on pickup)</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const UPI_ID   = "{{ settings.upi_id }}";
+const BASE_URL = "https://api.qrserver.com/v1/create-qr-code/";
+let timerSecs  = 600; // 10 minutes
+let timerIv    = null;
+const TOTAL    = 600;
+
+function buildUPIString(amount, note) {
+    const enc = encodeURIComponent;
+    return `upi://pay?pa=${enc(UPI_ID)}&pn=LaundryPro&am=${amount}&cu=INR&tn=${enc(note)}`;
+}
+
+function updateQR() {
+    const amt  = parseFloat(document.getElementById('amountInput').value) || 0;
+    const note = document.getElementById('noteInput').value || 'LaundryPro Payment';
+    const upi  = buildUPIString(amt, note);
+    const url  = `${BASE_URL}?size=200x200&data=${encodeURIComponent(upi)}&color=0d0f14&bgcolor=ffffff&margin=1`;
+    const img  = document.getElementById('qrImg');
+    img.style.opacity = '.4';
+    img.src = url;
+    img.onload = () => { img.style.transition='opacity .3s'; img.style.opacity='1'; };
+    // Update confirm button amount
+    document.querySelectorAll('#confirmAmt,#stepAmount').forEach(el => el.textContent = amt.toFixed(2));
+    // Highlight active pill
+    document.querySelectorAll('.qa-pill').forEach(p => p.classList.toggle('active', parseFloat(p.textContent.replace('Rs ','')) === amt));
+    // Reset timer
+    resetTimer();
+}
+
+function setAmount(val) {
+    document.getElementById('amountInput').value = val;
+    updateQR();
+}
+
+function refreshQR() {
+    updateQR();
+    const frame = document.getElementById('qrFrame');
+    frame.style.transform = 'scale(.96)';
+    setTimeout(() => frame.style.transform = 'scale(1)', 200);
+}
+
+function copyUPI() {
+    navigator.clipboard.writeText(UPI_ID).then(() => {
+        const icon = document.getElementById('copyIcon');
+        icon.className = 'fa-solid fa-check';
+        icon.style.color = 'var(--success)';
+        setTimeout(() => { icon.className='fa-regular fa-copy'; icon.style.color=''; }, 2000);
+    });
+}
+
+// ── TIMER ──────────────────────────────────────────────────
+function resetTimer() {
+    clearInterval(timerIv);
+    timerSecs = TOTAL;
+    runTimer();
+}
+
+function runTimer() {
+    timerIv = setInterval(() => {
+        if (--timerSecs <= 0) { clearInterval(timerIv); window.location.href = "{{ url_for('user_dashboard') }}"; return; }
+        const m = Math.floor(timerSecs / 60);
+        const s = timerSecs % 60;
+        document.getElementById('timerText').textContent = `${m}:${s<10?'0':''}${s}`;
+        // SVG ring
+        const pct    = timerSecs / TOTAL;
+        const offset = 283 * (1 - pct);
+        const ring   = document.getElementById('timerRing');
+        ring.style.strokeDashoffset = offset;
+        ring.style.stroke = timerSecs < 120 ? 'var(--warn)' : (timerSecs < 300 ? '#f5a623' : 'var(--success)');
+        document.getElementById('timerText').style.color = timerSecs < 120 ? 'var(--warn)' : 'var(--ink)';
+    }, 1000);
+}
+
+function showPaidConfirm() {
+    if (confirm('Confirm that you have completed the payment?')) {
+        window.location.href = "{{ url_for('user_dashboard') }}";
+    }
+}
+
+// Init
+window.addEventListener('load', () => { updateQR(); runTimer(); });
+</script>
+{% endblock %}

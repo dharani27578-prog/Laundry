@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% block title %}Laundry Pro – Fresh Clothes, Fresh Life{% endblock %}
+
+{% block head %}
+<style>
+@keyframes pulse     { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+@keyframes fadeInUp  { from{opacity:0;transform:translateY(24px);} to{opacity:1;transform:translateY(0);} }
+
+/* ── NAV ── */
+.lp-nav {
+    position:fixed; top:0; left:0; right:0; height:64px; z-index:900;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 32px;
+    background:rgba(13,15,20,.96); backdrop-filter:blur(14px);
+    border-bottom:1px solid rgba(255,255,255,.06);
+    transition:background .3s;
+}
+.lp-brand { font-family:'Syne',sans-serif; font-size:21px; font-weight:800; color:#fff; letter-spacing:-.02em; }
+.lp-brand span { color:var(--accent); }
+.nav-desktop { display:flex; align-items:center; gap:4px; }
+.nav-desktop a { color:rgba(255,255,255,.7); padding:8px 15px; border-radius:50px; font-size:14px; font-weight:500; transition:all .2s; }
+.nav-desktop a:hover { color:#fff; background:rgba(255,255,255,.1); }
+.nav-ham { display:none; background:none; border:none; color:#fff; font-size:22px; cursor:pointer; padding:8px; line-height:1; }
+
+/* ── MOBILE MENU ── */
+/* Full-screen overlay behind panel */
+#mobileMenuOverlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.7); z-index:1000;
+}
+#mobileMenuOverlay.open { display:block; }
+
+/* Slide-in panel from right */
+#mobileMenuPanel {
+    position:fixed; top:0; right:0; width:min(300px,88vw); height:100%;
+    background:var(--ink); z-index:1001;
+    transform:translateX(100%);
+    transition:transform .32s cubic-bezier(.4,0,.2,1);
+    display:flex; flex-direction:column;
+    overflow-y:auto;
+    box-shadow:-6px 0 32px rgba(0,0,0,.45);
+}
+#mobileMenuPanel.open { transform:translateX(0); }
+
+.mp-head { padding:18px 16px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; align-items:center; justify-content:space-between; }
+.mp-close { background:none; border:none; color:rgba(255,255,255,.6); font-size:22px; cursor:pointer; padding:4px; line-height:1; }
+.mp-links { padding:12px 10px; flex:1; }
+.mp-link { display:flex; align-items:center; gap:12px; padding:13px 14px; color:rgba(255,255,255,.75); font-size:14px; font-weight:500; border-radius:11px; transition:all .2s; text-decoration:none; border:none; background:none; width:100%; cursor:pointer; margin-bottom:2px; }
+.mp-link:hover { background:rgba(255,255,255,.08); color:#fff; }
+.mp-link i { width:18px; text-align:center; font-size:15px; }
+.mp-divider { height:1px; background:rgba(255,255,255,.07); margin:8px 0; }
+.mp-status { padding:10px 14px; border-radius:10px; background:rgba(255,255,255,.05); margin-bottom:4px; display:flex; align-items:center; gap:10px; }
+.mp-login-btn {
+    margin:12px; padding:14px; border-radius:12px;
+    background:linear-gradient(135deg,var(--primary),#3d6fff);
+    color:#fff; border:none; cursor:pointer;
+    font-family:'Syne',sans-serif; font-weight:700; font-size:14px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:all .2s; box-shadow:0 4px 16px rgba(26,86,255,.4);
+}
+.mp-login-btn:hover { opacity:.9; transform:translateY(-1px); }
+
+/* ── HERO ── */
+.hero { min-height:100vh; background:var(--ink); display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; padding:100px 20px 60px; text-align:center; }
+.hero-bg { position:absolute; inset:0; background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(26,86,255,.18),transparent 70%),radial-gradient(ellipse 50% 40% at 80% 80%,rgba(0,229,195,.12),transparent 60%); }
+.hero-grid { position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px); background-size:60px 60px; }
+.hero-content { position:relative; z-index:2; max-width:720px; }
+.hero-eyebrow { display:inline-flex; align-items:center; gap:8px; background:rgba(0,229,195,.12); border:1px solid rgba(0,229,195,.25); border-radius:50px; padding:6px 16px; color:var(--accent); font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; margin-bottom:28px; }
+.hero-title { font-family:'Syne',sans-serif; font-size:clamp(36px,7vw,72px); font-weight:800; color:#fff; line-height:1.05; letter-spacing:-.03em; margin-bottom:20px; }
+.hero-title .g { background:linear-gradient(135deg,var(--primary),var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.hero-sub { color:rgba(255,255,255,.55); font-size:clamp(15px,2.5vw,18px); max-width:480px; margin:0 auto 36px; line-height:1.7; }
+.hero-cta { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+.status-tag { margin-top:44px; display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:50px; font-size:13px; font-weight:600; }
+.status-open   { background:rgba(0,200,150,.15); border:1px solid rgba(0,200,150,.3); color:var(--success); }
+.status-closed { background:rgba(255,107,53,.15); border:1px solid rgba(255,107,53,.3); color:var(--warn); }
+.status-dot { width:8px; height:8px; border-radius:50%; background:currentColor; display:inline-block; animation:pulse 1.5s infinite; }
+
+/* ── SECTIONS ── */
+.section { padding:80px 0; }
+.section-label { font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--primary); margin-bottom:10px; }
+.section-title { font-size:clamp(26px,4vw,38px); font-weight:800; letter-spacing:-.02em; }
+.svc-card { background:#fff; border:1.5px solid var(--border); border-radius:18px; padding:26px; transition:all .25s; height:100%; }
+.svc-card:hover { border-color:var(--primary); transform:translateY(-5px); box-shadow:0 14px 36px rgba(26,86,255,.14); }
+.svc-icon { width:52px; height:52px; border-radius:14px; background:linear-gradient(135deg,#eef2ff,#dde4ff); display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:14px; }
+.svc-price { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color:var(--primary); margin-top:10px; }
+.svc-unit { font-size:12px; color:var(--muted); }
+.step-num { width:50px; height:50px; border-radius:50%; background:var(--primary); color:#fff; font-family:'Syne',sans-serif; font-size:20px; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; }
+.pricing-row { display:flex; align-items:center; justify-content:space-between; padding:15px 0; border-bottom:1px dashed var(--border); }
+.pricing-row:last-child { border-bottom:none; }
+.lp-footer { background:var(--ink); color:rgba(255,255,255,.5); padding:36px 20px; text-align:center; font-size:13px; }
+.lp-footer .lp-brand { display:block; margin-bottom:8px; font-size:18px; }
+
+/* Auth modal tabs */
+.auth-tab { cursor:pointer; padding:10px 20px; border-radius:8px; font-weight:600; font-size:14px; transition:all .2s; }
+.auth-tab.active { background:var(--ink); color:#fff; }
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px) {
+    .lp-nav { padding:0 16px; height:58px; }
+    .nav-desktop { display:none; }
+    .nav-ham { display:block; }
+    .hero { padding:80px 16px 50px; }
+    .hero-cta { flex-direction:column; align-items:center; }
+    .hero-cta .btn-primary-custom,
+    .hero-cta .btn-accent-custom { width:100%; max-width:320px; justify-content:center; padding:13px 20px; }
+    .section { padding:50px 0; }
+    .svc-card { padding:20px; }
+    .step-num { width:42px; height:42px; font-size:17px; }
+}
+@media(max-width:480px) {
+    .hero-eyebrow { font-size:10px; }
+    .status-tag { font-size:11px; padding:8px 14px; }
+}
+</style>
+{% endblock %}
+
+{% block body %}
+
+<!-- ════ NAV ════ -->
+<nav class="lp-nav" id="lpNav">
+    <div class="lp-brand">LAUNDRY<span>PRO</span></div>
+
+    <!-- Desktop links -->
+    <div class="nav-desktop">
+        <a href="#home">Home</a>
+        <a href="#services">Services</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#how">How It Works</a>
+        <button class="btn-primary-custom ms-2" data-bs-toggle="modal" data-bs-target="#authModal" style="padding:9px 20px;font-size:13px;">
+            <i class="fa-solid fa-user"></i> Login / Sign Up
+        </button>
+    </div>
+
+    <!-- Mobile hamburger -->
+    <button class="nav-ham" id="navHam" onclick="openMobileMenu()">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+</nav>
+
+<!-- ════ MOBILE MENU ════ -->
+<!-- Overlay (click to close) -->
+<div id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
+
+<!-- Slide panel -->
+<div id="mobileMenuPanel">
+    <div class="mp-head">
+        <div class="lp-brand" style="font-size:18px;">LAUNDRY<span>PRO</span></div>
+        <button class="mp-close" onclick="closeMobileMenu()">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <div class="mp-links">
+        <!-- Nav links — use onclick to close menu and navigate -->
+        <a href="#home"     class="mp-link" onclick="navTo('home')">    <i class="fa-solid fa-house"           style="color:#1a56ff;"></i> Home</a>
+        <a href="#services" class="mp-link" onclick="navTo('services')"><i class="fa-solid fa-soap"            style="color:#6200ea;"></i> Services</a>
+        <a href="#pricing"  class="mp-link" onclick="navTo('pricing')"> <i class="fa-solid fa-tag"             style="color:#00c896;"></i> Pricing</a>
+        <a href="#how"      class="mp-link" onclick="navTo('how')">     <i class="fa-solid fa-circle-question" style="color:#f5a623;"></i> How It Works</a>
+
+        <div class="mp-divider"></div>
+
+        <!-- Shop open/closed status -->
+        <div class="mp-status">
+            <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:{{ 'var(--success)' if is_open else 'var(--warn)' }};animation:pulse 1.5s infinite;"></span>
+            <div>
+                <div style="font-size:12px;font-weight:700;color:#fff;">{{ 'Open Now' if is_open else 'Currently Closed' }}</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.4);">{{ settings.opening_time_str or '8:00 AM' }} – {{ settings.closing_time_str or '8:00 PM' }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login button at bottom -->
+    <button class="mp-login-btn" id="mpLoginBtn" onclick="openLoginFromMenu()">
+        <i class="fa-solid fa-right-to-bracket"></i> Login / Sign Up
+    </button>
+</div>
+
+<!-- ════ HERO ════ -->
+<section class="hero" id="home">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-content animate__animated animate__fadeInUp">
+        <div class="hero-eyebrow"><span class="status-dot"></span> Laundry Made Simple</div>
+        <h1 class="hero-title">Fresh Clothes,<br><span class="g">Fresh Life</span></h1>
+        <p class="hero-sub">Professional laundry service that picks up, cleans, and delivers — while you do what matters.</p>
+        <div class="hero-cta">
+            <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#authModal" style="font-size:15px;padding:13px 28px;">
+                <i class="fa-solid fa-basket-shopping"></i> Book a Pickup
+            </button>
+            <a href="#services" class="btn-accent-custom" style="font-size:15px;padding:13px 28px;">
+                View Services
+            </a>
+        </div>
+        <div class="status-tag {{ 'status-open' if is_open else 'status-closed' }}">
+            <span class="status-dot"></span>
+            {{ 'We are OPEN today' if is_open else 'Currently CLOSED' }}
+            &nbsp;·&nbsp; {{ settings.opening_time_str or '8:00 AM' }} – {{ settings.closing_time_str or '8:00 PM' }}
+        </div>
+    </div>
+</section>
+
+<!-- ════ SERVICES ════ -->
+<section class="section" id="services">
+    <div class="container">
+        <div class="text-center mb-5">
+            <div class="section-label">What We Offer</div>
+            <h2 class="section-title">Our Services</h2>
+        </div>
+        <div class="row g-4">
+            {% set icons=['fa-shirt','fa-droplet','fa-fire-flame-curved','fa-arrow-rotate-left','fa-wind','fa-soap'] %}
+            {% for svc in services %}
+            <div class="col-md-4 col-sm-6">
+                <div class="svc-card">
+                    <div class="svc-icon"><i class="fa-solid {{ icons[loop.index0 % icons|length] }}" style="color:var(--primary);"></i></div>
+                    <h4 style="font-size:17px;font-weight:700;margin-bottom:5px;">{{ svc.name }}</h4>
+                    <p style="color:var(--muted);font-size:13px;line-height:1.6;">{{ svc.description or '' }}</p>
+                    <div class="svc-price">{{ settings.currency or 'Rs' }}{{ svc.price }} <span class="svc-unit">{{ svc.unit }}</span></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ════ HOW IT WORKS ════ -->
+<section class="section" id="how" style="background:var(--ink);">
+    <div class="container">
+        <div class="text-center mb-5">
+            <div class="section-label" style="color:var(--accent);">Process</div>
+            <h2 class="section-title" style="color:#fff;">How It Works</h2>
+        </div>
+        <div class="row g-4 text-center">
+            {% for title,desc,icon in [
+                ('Register',  'Create a free account in seconds.',        'fa-user-plus'),
+                ('Book',      'Choose your service and schedule pickup.',  'fa-calendar-check'),
+                ('We Wash',   'We pick up, clean and pack with care.',     'fa-soap'),
+                ('Delivered', 'Fresh clothes back at your doorstep.',      'fa-box-open')
+            ] %}
+            <div class="col-6 col-md-3">
+                <div class="step-num">{{ loop.index }}</div>
+                <i class="fa-solid {{ icon }}" style="font-size:26px;color:var(--accent);margin-bottom:10px;display:block;"></i>
+                <h5 style="font-family:'Syne',sans-serif;font-weight:700;color:#fff;font-size:15px;">{{ title }}</h5>
+                <p style="color:rgba(255,255,255,.5);font-size:13px;">{{ desc }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ════ PRICING ════ -->
+<section class="section" id="pricing">
+    <div class="container" style="max-width:680px;">
+        <div class="text-center mb-5">
+            <div class="section-label">Transparent</div>
+            <h2 class="section-title">Pricing</h2>
+        </div>
+        <div class="lp-card p-3 p-md-4">
+            {% for svc in services %}
+            <div class="pricing-row">
+                <div>
+                    <div style="font-weight:600;font-size:15px;">{{ svc.name }}</div>
+                    <div style="font-size:12px;color:var(--muted);">{{ svc.unit }}</div>
+                </div>
+                <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--primary);">{{ settings.currency or 'Rs' }}{{ svc.price }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-4">
+            <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#authModal" style="padding:12px 28px;font-size:14px;">
+                <i class="fa-solid fa-basket-shopping"></i> Place Your First Order
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- ════ FOOTER ════ -->
+<footer class="lp-footer">
+    <div class="lp-brand">LAUNDRY<span>PRO</span></div>
+    <p>© 2024 Laundry Pro. All rights reserved.</p>
+    <p style="margin-top:5px;font-size:11px;">Working Days: {{ settings.working_days }}</p>
+</footer>
+
+<!-- ════ AUTH MODAL ════ -->
+<div class="modal fade lp-modal" id="authModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex gap-2">
+                    <div class="auth-tab active" id="tabLogin"    onclick="switchTab('login')">Sign In</div>
+                    <div class="auth-tab"         id="tabRegister" onclick="switchTab('register')">Create Account</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+
+                <!-- LOGIN -->
+                <div id="loginForm">
+                    <form action="/login" method="POST">
+                        <div class="mb-3">
+                            <label class="lp-label">Username</label>
+                            <input type="text" name="username" class="lp-input" placeholder="Enter your username" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="lp-label">Password</label>
+                            <input type="password" name="password" class="lp-input" placeholder="Enter your password" required>
+                        </div>
+                        <button type="submit" class="btn-primary-custom w-100" style="justify-content:center;border-radius:10px;padding:13px;font-size:15px;">
+                            <i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In
+                        </button>
+                    </form>
+                    <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--muted);">No account? <a href="#" onclick="switchTab('register')">Create one free</a></p>
+                </div>
+
+                <!-- REGISTER -->
+                <div id="registerForm" style="display:none;">
+                    <form action="/register" method="POST">
+                        <div class="row g-3">
+                            <div class="col-6"><label class="lp-label">Full Name</label><input type="text" name="full_name" class="lp-input" placeholder="John Doe"></div>
+                            <div class="col-6"><label class="lp-label">Username *</label><input type="text" name="username" class="lp-input" placeholder="johndoe" required></div>
+                            <div class="col-6"><label class="lp-label">Email</label><input type="email" name="email" class="lp-input" placeholder="you@email.com"></div>
+                            <div class="col-6"><label class="lp-label">Phone</label><input type="tel" name="phone" class="lp-input" placeholder="9876543210"></div>
+                            <div class="col-12"><label class="lp-label">Address</label><input type="text" name="address" class="lp-input" placeholder="Your address"></div>
+                            <div class="col-12"><label class="lp-label">Password *</label><input type="password" name="password" class="lp-input" placeholder="Create a password" required></div>
+                        </div>
+                        <button type="submit" class="btn-primary-custom w-100 mt-3" style="justify-content:center;border-radius:10px;padding:13px;font-size:15px;">
+                            <i class="fa-solid fa-user-plus"></i> Create Account
+                        </button>
+                    </form>
+                    <p style="text-align:center;margin-top:14px;font-size:13px;color:var(--muted);">Already have an account? <a href="#" onclick="switchTab('login')">Sign in</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── AUTH TABS ── */
+function switchTab(tab) {
+    var isLogin = (tab === 'login');
+    document.getElementById('loginForm').style.display    = isLogin ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = isLogin ? 'none'  : 'block';
+    document.getElementById('tabLogin').classList.toggle('active', isLogin);
+    document.getElementById('tabRegister').classList.toggle('active', !isLogin);
+}
+
+/* ── MOBILE MENU ── */
+var menuOpen = false;
+
+function openMobileMenu() {
+    menuOpen = true;
+    document.getElementById('mobileMenuOverlay').classList.add('open');
+    document.getElementById('mobileMenuPanel').classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMobileMenu() {
+    menuOpen = false;
+    document.getElementById('mobileMenuOverlay').classList.remove('open');
+    document.getElementById('mobileMenuPanel').classList.remove('open');
+    document.body.style.overflow = '';
+}
+
+/* Navigate to section and close menu */
+function navTo(sectionId) {
+    closeMobileMenu();
+    /* Small delay so panel slides out before scroll */
+    setTimeout(function() {
+        var el = document.getElementById(sectionId);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 280);
+}
+
+/* Login button in mobile menu — close menu first, then open modal */
+function openLoginFromMenu() {
+    closeMobileMenu();
+    setTimeout(function() {
+        var modal = new bootstrap.Modal(document.getElementById('authModal'));
+        modal.show();
+    }, 320);
+}
+
+/* Nav scroll tint */
+window.addEventListener('scroll', function() {
+    var nav = document.getElementById('lpNav');
+    if (nav) nav.style.background = window.scrollY > 40 ? 'rgba(13,15,20,1)' : 'rgba(13,15,20,.96)';
+});
+</script>
+{% endblock %}

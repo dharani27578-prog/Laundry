@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}Settings – Laundry Pro{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+    {% include 'partials/admin_sidebar.html' with context %}
+
+    <div class="admin-content">
+        <div class="topbar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="menu-toggle" onclick="openSidebar()"><i class="fa-solid fa-bars"></i></button>
+                <div class="topbar-title">Settings</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="row g-3">
+                <!-- SHOP SETTINGS -->
+                <div class="col-12 col-lg-6">
+                    <div class="lp-card">
+                        <div class="lp-card-header"><i class="fa-solid fa-store" style="color:var(--primary); margin-right:8px;"></i>Shop Settings</div>
+                        <div class="p-4">
+                            <form action="/admin/settings" method="POST">
+                                <div class="mb-3">
+                                    <label class="lp-label">Shop Name</label>
+                                    <input type="text" name="shop_name" class="lp-input" value="{{ settings.shop_name or 'Laundry Pro' }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="lp-label">UPI ID</label>
+                                    <input type="text" name="upi_id" class="lp-input" value="{{ settings.upi_id or '' }}" placeholder="shop@upi">
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-6">
+                                        <label class="lp-label">Opening Time</label>
+                                        <input type="time" name="opening_time" class="lp-input" value="{{ settings.opening_time_hm or '08:00' }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="lp-label">Closing Time</label>
+                                        <input type="time" name="closing_time" class="lp-input" value="{{ settings.closing_time_hm or '20:00' }}">
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="lp-label">Working Days</label>
+                                    <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:5px;">
+                                        {% set selected_days = (settings.working_days or '').split(',') %}
+                                        {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+                                        <label style="display:flex; align-items:center; gap:5px; padding:7px 13px; border:1.5px solid var(--border); border-radius:50px; cursor:pointer; font-size:12px; font-weight:500; transition:all .2s;" class="day-label">
+                                            <input type="checkbox" name="working_days" value="{{ day }}" {% if day in selected_days %}checked{% endif %} style="display:none;" onchange="highlightDay(this)">
+                                            {{ day[:3] }}
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn-primary-custom w-100" style="justify-content:center; border-radius:10px; padding:12px;">
+                                    <i class="fa-solid fa-save"></i> Save Settings
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SERVICES -->
+                <div class="col-12 col-lg-6">
+                    <div class="lp-card">
+                        <div class="lp-card-header">
+                            <span><i class="fa-solid fa-soap" style="color:var(--accent); margin-right:8px;"></i>Services & Pricing</span>
+                            <button class="btn-primary-custom" style="padding:6px 12px; font-size:11px; border-radius:7px;" onclick="openServiceModal(null)">
+                                <i class="fa-solid fa-plus"></i> Add
+                            </button>
+                        </div>
+                        <div>
+                            {% for s in services %}
+                            <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 16px; border-bottom:1px solid var(--border); gap:8px;">
+                                <div style="min-width:0;">
+                                    <div style="font-weight:600; font-size:13px;">{{ s.name }}</div>
+                                    <div style="font-size:11px; color:var(--muted);">Rs {{ s.price }} {{ s.unit }}</div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                                    <span class="status-pill {{ 'status-Delivered' if s.is_active else 'status-Cancelled' }}" style="font-size:10px;">{{ 'Active' if s.is_active else 'Off' }}</span>
+                                    <button class="btn-primary-custom" style="padding:5px 9px; font-size:11px; border-radius:6px;"
+                                        onclick="openServiceModal({{ s.id }},'{{ s.name }}',{{ s.price }},'{{ s.unit }}','{{ s.description or '' }}',{{ s.is_active }})">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SERVICE MODAL -->
+<div class="modal fade lp-modal" id="serviceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-syne" id="svcModalTitle">Add Service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/services/save" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="service_id" id="svcId">
+                    <div class="mb-3">
+                        <label class="lp-label">Service Name</label>
+                        <input type="text" name="name" class="lp-input" id="svcName" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="lp-label">Price (Rs)</label>
+                            <input type="number" name="price" class="lp-input" id="svcPrice" min="0" step="0.5" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="lp-label">Unit</label>
+                            <select name="unit" class="lp-input" id="svcUnit">
+                                <option value="per kg">per kg</option>
+                                <option value="per piece">per piece</option>
+                                <option value="per set">per set</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="lp-label">Description</label>
+                        <textarea name="description" class="lp-input" rows="2" id="svcDesc"></textarea>
+                    </div>
+                    <div class="mt-3">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:500;">
+                            <input type="checkbox" name="is_active" value="1" id="svcActive"> Active (visible to users)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-custom" style="border-radius:8px;"><i class="fa-solid fa-save"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.day-label').forEach(lbl => {
+    const cb = lbl.querySelector('input');
+    const update = () => {
+        lbl.style.borderColor = cb.checked ? 'var(--primary)' : 'var(--border)';
+        lbl.style.background  = cb.checked ? '#eef2ff' : '';
+        lbl.style.color       = cb.checked ? 'var(--primary)' : '';
+        lbl.style.fontWeight  = cb.checked ? '700' : '500';
+    };
+    update();
+    cb.addEventListener('change', update);
+});
+
+function openServiceModal(id, name='', price=0, unit='per kg', desc='', active=1) {
+    document.getElementById('svcModalTitle').textContent = id ? 'Edit Service' : 'Add Service';
+    document.getElementById('svcId').value    = id || '';
+    document.getElementById('svcName').value  = name;
+    document.getElementById('svcPrice').value = price;
+    document.getElementById('svcUnit').value  = unit;
+    document.getElementById('svcDesc').value  = desc;
+    document.getElementById('svcActive').checked = !!active;
+    new bootstrap.Modal(document.getElementById('serviceModal')).show();
+}
+</script>
+{% endblock %}
