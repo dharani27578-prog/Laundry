@@ -1,0 +1,4 @@
+mysql.connector
+flask
+functools
+json
